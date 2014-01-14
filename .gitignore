@@ -7,6 +7,9 @@
 _obj
 _test
 
+# Apple stuff
+.DS_Store
+
 # Architecture specific extensions/prefixes
 *.[568vq]
 [568vq].out
@@ -20,3 +23,7 @@ _cgo_export.*
 _testmain.go
 
 *.exe
+
+# Emacs stuff
+*~
+\#*#
