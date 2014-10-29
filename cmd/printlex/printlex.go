@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"lex"
+	"github.com/zellyn/gocool/src/lex"
 )
 
 func main() {
-	_ = lex.lex
+	_ = lex.Lex
 	fmt.Println("Hello, world")
 }

@@ -1,4 +1,4 @@
 gocool
 ======
 
-Go implementation of the Cool programming language
+Go implementation of the Cool programming language.

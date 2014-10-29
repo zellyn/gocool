@@ -12,6 +12,9 @@ import (
 	"unicode/utf8"
 )
 
+// Pos represents a byte position in the original input text.
+type Pos int
+
 // item represents a token or text string returned from the scanner.
 type item struct {
 	typ itemType // The type of this item.
@@ -69,6 +72,55 @@ const (
 	itemTemplate // template keyword
 	itemWith     // with keyword
 )
+
+/* Items in Cool, from my first attempt. Included here for reference.
+
+itemError itemType = iota
+itemEOF
+itemIdentifier
+
+itemClass
+itemElse
+itemFi
+itemIf
+itemIn
+itemInherits
+itemLet
+itemLoop
+itemPool
+itemThen
+itemWhile
+itemAssign
+itemCase
+itemEsac
+itemOf
+itemDarrow
+itemNew
+itemStrConst
+itemIntConst
+itemBoolConst
+itemTypeId
+itemObectId
+itemLe
+itemNot
+itemIsVoid
+
+itemPlus
+itemDivide
+itemMinus
+itemTimes
+itemEquals
+itemLessThan
+itemDot
+itemComma
+itemSemicolon
+itemColon
+itemLParen
+itemRParen
+itemAt
+itemLBrace
+itemRBrace
+*/
 
 var key = map[string]itemType{
 	".":        itemDot,
@@ -175,7 +227,7 @@ func (l *lexer) nextItem() item {
 }
 
 // lex creates a new scanner for the input string.
-func lex(name, input, left, right string) *lexer {
+func Lex(name, input, left, right string) *lexer {
 	if left == "" {
 		left = leftDelim
 	}
