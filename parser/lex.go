@@ -3,7 +3,7 @@
 // The lexer is copied from
 // http://golang.org/src/pkg/text/template/parse/lex.go and modified.
 
-package lex
+package parser
 
 import (
 	"fmt"
@@ -40,98 +40,49 @@ func (i item) String() string {
 type itemType int
 
 const (
-	itemError        itemType = iota // error occurred; value is text of error
-	itemBool                         // boolean constant
-	itemChar                         // printable ASCII character; grab bag for comma etc.
-	itemCharConstant                 // character constant
-	itemComplex                      // complex constant (1+2i); imaginary is just a number
-	itemColonEquals                  // colon-equals (':=') introducing a declaration
+	itemError itemType = iota // error occurred; value is text of error
+	// itemBool                         // boolean constant
+	// itemChar                         // printable ASCII character; grab bag for comma etc.
+	// itemCharConstant                 // character constant
+	// itemComplex                      // complex constant (1+2i); imaginary is just a number
+	// itemColonEquals                  // colon-equals (':=') introducing a declaration
 	itemEOF
-	itemField      // alphanumeric identifier starting with '.'
-	itemIdentifier // alphanumeric identifier not starting with '.'
-	itemLeftDelim  // left action delimiter
-	itemLeftParen  // '(' inside action
-	itemNumber     // simple number, including imaginary
-	itemPipe       // pipe symbol
-	itemRawString  // raw quoted string (includes quotes)
-	itemRightDelim // right action delimiter
-	itemRightParen // ')' inside action
-	itemSpace      // run of spaces separating arguments
-	itemString     // quoted string (includes quotes)
-	itemText       // plain text
-	itemVariable   // variable starting with '$', such as '$' or  '$1' or '$hello'
+	// itemField      // alphanumeric identifier starting with '.'
+	// itemIdentifier // alphanumeric identifier not starting with '.'
+	// itemLeftDelim  // left action delimiter
+	// itemLeftParen  // '(' inside action
+	// itemNumber     // simple number, including imaginary
+	// itemPipe       // pipe symbol
+	// itemRawString  // raw quoted string (includes quotes)
+	// itemRightDelim // right action delimiter
+	// itemRightParen // ')' inside action
+	// itemString     // quoted string (includes quotes)
+	itemText // plain text
+	// itemVariable   // variable starting with '$', such as '$' or  '$1' or '$hello'
+	itemWhitespace // run of whitespace
 	// Keywords appear after all the rest.
-	itemKeyword  // used only to delimit the keywords
-	itemDot      // the cursor, spelled '.'
-	itemDefine   // define keyword
-	itemElse     // else keyword
-	itemEnd      // end keyword
-	itemIf       // if keyword
-	itemNil      // the untyped nil constant, easiest to treat as a keyword
-	itemRange    // range keyword
-	itemTemplate // template keyword
-	itemWith     // with keyword
+	itemKeyword // used only to delimit the keywords
+	// itemDot      // the cursor, spelled '.'
+	// itemDefine   // define keyword
+	// itemElse     // else keyword
+	// itemEnd      // end keyword
+	// itemIf       // if keyword
+	// itemNil      // the untyped nil constant, easiest to treat as a keyword
+	// itemRange    // range keyword
+	// itemTemplate // template keyword
+	// itemWith     // with keyword
 )
 
-/* Items in Cool, from my first attempt. Included here for reference.
-
-itemError itemType = iota
-itemEOF
-itemIdentifier
-
-itemClass
-itemElse
-itemFi
-itemIf
-itemIn
-itemInherits
-itemLet
-itemLoop
-itemPool
-itemThen
-itemWhile
-itemAssign
-itemCase
-itemEsac
-itemOf
-itemDarrow
-itemNew
-itemStrConst
-itemIntConst
-itemBoolConst
-itemTypeId
-itemObectId
-itemLe
-itemNot
-itemIsVoid
-
-itemPlus
-itemDivide
-itemMinus
-itemTimes
-itemEquals
-itemLessThan
-itemDot
-itemComma
-itemSemicolon
-itemColon
-itemLParen
-itemRParen
-itemAt
-itemLBrace
-itemRBrace
-*/
-
 var key = map[string]itemType{
-	".":        itemDot,
-	"define":   itemDefine,
-	"else":     itemElse,
-	"end":      itemEnd,
-	"if":       itemIf,
-	"range":    itemRange,
-	"nil":      itemNil,
-	"template": itemTemplate,
-	"with":     itemWith,
+// ".":        itemDot,
+// "define":   itemDefine,
+// "else":     itemElse,
+// "end":      itemEnd,
+// "if":       itemIf,
+// "range":    itemRange,
+// "nil":      itemNil,
+// "template": itemTemplate,
+// "with":     itemWith,
 }
 
 const eof = -1
@@ -143,8 +94,6 @@ type stateFn func(*lexer) stateFn
 type lexer struct {
 	name       string    // the name of the input; used only for error reports
 	input      string    // the string being scanned
-	leftDelim  string    // start of action
-	rightDelim string    // end of action
 	state      stateFn   // the next lexing function to enter
 	pos        Pos       // current position in the input
 	start      Pos       // start position of this item
@@ -227,19 +176,11 @@ func (l *lexer) nextItem() item {
 }
 
 // lex creates a new scanner for the input string.
-func Lex(name, input, left, right string) *lexer {
-	if left == "" {
-		left = leftDelim
-	}
-	if right == "" {
-		right = rightDelim
-	}
+func lex(name, input string) *lexer {
 	l := &lexer{
-		name:       name,
-		input:      input,
-		leftDelim:  left,
-		rightDelim: right,
-		items:      make(chan item),
+		name:  name,
+		input: input,
+		items: make(chan item),
 	}
 	go l.run()
 	return l
@@ -247,7 +188,7 @@ func Lex(name, input, left, right string) *lexer {
 
 // run runs the state machine for the lexer.
 func (l *lexer) run() {
-	for l.state = lexText; l.state != nil; {
+	for l.state = lexStart; l.state != nil; {
 		l.state = l.state(l)
 	}
 }
@@ -255,12 +196,65 @@ func (l *lexer) run() {
 // state functions
 
 const (
-	leftDelim    = "{{"
-	rightDelim   = "}}"
-	leftComment  = "/*"
-	rightComment = "*/"
+	leftComment  = "(*"
+	rightComment = "*)"
 )
 
+// lexStart is the generic lex state, waiting to see anything at all.
+func lexStart(l *lexer) stateFn {
+	if strings.HasPrefix(l.input[l.pos:], leftComment) {
+		return lexComment
+	}
+	switch r := l.next(); {
+	case r == eof:
+		l.emit(itemEOF)
+		return nil
+	case isWhitespace(r):
+		return lexWhitespace
+	default:
+		return l.errorf("unrecognized character in action: %#U", r)
+	}
+	return lexStart
+}
+
+// lexWhitespace scans a run of whitespace characters.
+// One space has already been seen.
+func lexWhitespace(l *lexer) stateFn {
+	for isWhitespace(l.peek()) {
+		l.next()
+	}
+	l.emit(itemWhitespace)
+	return lexStart
+}
+
+// lexComment scans a comment. The left comment marker is known to be present.
+func lexComment(l *lexer) stateFn {
+	l.pos += Pos(len(leftComment))
+	depth := 1
+	for {
+		left := strings.Index(l.input[l.pos:], leftComment)
+		right := strings.Index(l.input[l.pos:], rightComment)
+		if left < 0 && right < 0 {
+			return l.errorf("unclosed comment")
+		}
+		// next is a comment start
+		if left >= 0 && (right < 0 || left < right) {
+			depth += 1
+			l.pos += Pos(left + len(leftComment))
+			continue
+		}
+		// next is a comment end
+		l.pos += Pos(right + len(rightComment))
+		depth -= 1
+		if depth == 0 {
+			l.ignore()
+			break
+		}
+	}
+	return lexStart
+}
+
+/*
 // lexText scans until an opening action delimiter, "{{".
 func lexText(l *lexer) stateFn {
 	for {
@@ -586,6 +580,12 @@ Loop:
 	}
 	l.emit(itemRawString)
 	return lexInsideAction
+}
+*/
+
+// isWhitespace reports whether r is a whitespace (space or end-of-line) character.
+func isWhitespace(r rune) bool {
+	return isSpace(r) || isEndOfLine(r)
 }
 
 // isSpace reports whether r is a space character.
