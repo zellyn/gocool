@@ -20,8 +20,10 @@ type item struct {
 	typ itemType // The type of this item.
 	pos Pos      // The starting position, in bytes, of this item in the input string.
 	val string   // The value of this item.
+	err string   // An optional error message.
 }
 
+/*
 func (i item) String() string {
 	switch {
 	case i.typ == itemEOF:
@@ -35,54 +37,93 @@ func (i item) String() string {
 	}
 	return fmt.Sprintf("%q", i.val)
 }
+*/
 
 // itemType identifies the type of lex items.
 type itemType int
 
 const (
-	itemError itemType = iota // error occurred; value is text of error
-	// itemBool                         // boolean constant
-	// itemChar                         // printable ASCII character; grab bag for comma etc.
-	// itemCharConstant                 // character constant
-	// itemComplex                      // complex constant (1+2i); imaginary is just a number
-	// itemColonEquals                  // colon-equals (':=') introducing a declaration
-	itemEOF
-	// itemField      // alphanumeric identifier starting with '.'
-	// itemIdentifier // alphanumeric identifier not starting with '.'
-	// itemLeftDelim  // left action delimiter
-	// itemLeftParen  // '(' inside action
-	// itemNumber     // simple number, including imaginary
-	// itemPipe       // pipe symbol
-	// itemRawString  // raw quoted string (includes quotes)
-	// itemRightDelim // right action delimiter
-	// itemRightParen // ')' inside action
-	// itemString     // quoted string (includes quotes)
-	itemText // plain text
-	// itemVariable   // variable starting with '$', such as '$' or  '$1' or '$hello'
-	itemWhitespace // run of whitespace
+	itemError      itemType = iota // error occurred; value is text of error
+	itemBool                       // boolean constant
+	itemLeftBrace                  // '{'
+	itemRightBrace                 // '}'
+	itemComma                      // ','
+	itemColon                      // ':'
+	itemSemicolon                  // ';'
+	itemLeftParen                  // '('
+	itemRightParen                 // ')'
+	itemCompare                    // <, etc.
+	itemOperator                   // +, etc.
+	itemDot                        // '.'
+	itemAssign                     // <-
+	itemDarrow                     // =>
+	itemAt                         // '@'
+	itemEOF                        // end-of-file
+	itemObjectId                   // Identifier starting with uppercase
+	itemTypeId                     // Identifier starting with lowercase
+	itemNumber                     // simple numeric contant
+	itemText                       // plain text
+	itemWhitespace                 // run of whitespace
+	itemString                     // quoted string
 	// Keywords appear after all the rest.
-	itemKeyword // used only to delimit the keywords
-	// itemDot      // the cursor, spelled '.'
-	// itemDefine   // define keyword
-	// itemElse     // else keyword
-	// itemEnd      // end keyword
-	// itemIf       // if keyword
-	// itemNil      // the untyped nil constant, easiest to treat as a keyword
-	// itemRange    // range keyword
-	// itemTemplate // template keyword
-	// itemWith     // with keyword
+	itemKeyword  // used only to delimit the keywords
+	itemElse     // else keyword
+	itemClass    // class keyword
+	itemIf       // if
+	itemThen     // then
+	itemFi       // fi
+	itemLoop     // loop
+	itemPool     // pool
+	itemNew      // new
+	itemIn       // in
+	itemInherits // inherits
+	itemIsvoid   // isvoid
+	itemLet      // let
+	itemWhile    // while
+	itemCase     // case
+	itemEsac     // esac
+	itemOf       // of
+	itemNot      // not
+
 )
 
+var single = map[rune]itemType{
+	'{': itemLeftBrace,
+	'}': itemRightBrace,
+	'(': itemLeftParen,
+	')': itemRightParen,
+	':': itemColon,
+	';': itemSemicolon,
+	'<': itemCompare,
+	'=': itemCompare,
+	',': itemComma,
+	'+': itemOperator,
+	'-': itemOperator,
+	'.': itemDot,
+	'~': itemOperator,
+	'*': itemOperator,
+	'/': itemOperator,
+	'@': itemAt,
+}
+
 var key = map[string]itemType{
-// ".":        itemDot,
-// "define":   itemDefine,
-// "else":     itemElse,
-// "end":      itemEnd,
-// "if":       itemIf,
-// "range":    itemRange,
-// "nil":      itemNil,
-// "template": itemTemplate,
-// "with":     itemWith,
+	"else":     itemElse,
+	"class":    itemClass,
+	"if":       itemIf,
+	"then":     itemThen,
+	"fi":       itemFi,
+	"loop":     itemLoop,
+	"pool":     itemPool,
+	"new":      itemNew,
+	"in":       itemIn,
+	"inherits": itemInherits,
+	"isvoid":   itemIsvoid,
+	"let":      itemLet,
+	"while":    itemWhile,
+	"case":     itemCase,
+	"esac":     itemEsac,
+	"of":       itemOf,
+	"not":      itemNot,
 }
 
 const eof = -1
@@ -129,7 +170,7 @@ func (l *lexer) backup() {
 
 // emit passes an item back to the client.
 func (l *lexer) emit(t itemType) {
-	l.items <- item{t, l.start, l.input[l.start:l.pos]}
+	l.items <- item{t, l.start, l.input[l.start:l.pos], ""}
 	l.start = l.pos
 }
 
@@ -161,17 +202,22 @@ func (l *lexer) lineNumber() int {
 	return 1 + strings.Count(l.input[:l.lastPos], "\n")
 }
 
+// emitSoftErrorf returns an error token.
+func (l *lexer) emitSoftErrorf(format string, args ...interface{}) {
+	l.items <- item{itemError, l.start, l.input[l.start:l.pos], fmt.Sprintf(format, args...)}
+}
+
 // errorf returns an error token and terminates the scan by passing
 // back a nil pointer that will be the next state, terminating l.nextItem.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	l.items <- item{itemError, l.start, fmt.Sprintf(format, args...)}
+	l.items <- item{itemError, l.start, l.input[l.start:l.pos], fmt.Sprintf(format, args...)}
 	return nil
 }
 
 // nextItem returns the next item from the input.
 func (l *lexer) nextItem() item {
 	item := <-l.items
-	l.lastPos = item.pos
+	l.lastPos = item.pos + Pos(len(item.val))
 	return item
 }
 
@@ -198,6 +244,11 @@ func (l *lexer) run() {
 const (
 	leftComment  = "(*"
 	rightComment = "*)"
+	lineComment  = "--"
+	assign       = "<-"
+	darrow       = "=>"
+	le           = "<="
+	digits       = "0123456789"
 )
 
 // lexStart is the generic lex state, waiting to see anything at all.
@@ -205,14 +256,42 @@ func lexStart(l *lexer) stateFn {
 	if strings.HasPrefix(l.input[l.pos:], leftComment) {
 		return lexComment
 	}
+	if strings.HasPrefix(l.input[l.pos:], lineComment) {
+		return lexLineComment
+	}
+	if strings.HasPrefix(l.input[l.pos:], assign) {
+		l.pos += Pos(len(assign))
+		l.emit(itemAssign)
+		return lexStart
+	}
+	if strings.HasPrefix(l.input[l.pos:], darrow) {
+		l.pos += Pos(len(darrow))
+		l.emit(itemDarrow)
+		return lexStart
+	}
+	if strings.HasPrefix(l.input[l.pos:], le) {
+		l.pos += Pos(len(le))
+		l.emit(itemOperator)
+		return lexStart
+	}
 	switch r := l.next(); {
 	case r == eof:
 		l.emit(itemEOF)
 		return nil
 	case isWhitespace(r):
 		return lexWhitespace
+	case r == '_' || unicode.IsLetter(r):
+		l.backup()
+		return lexIdentifier
+	case unicode.IsDigit(r):
+		l.backup()
+		return lexNumber
+	case single[r] > 0:
+		l.emit(single[r])
+	case r == '"':
+		return lexQuote
 	default:
-		return l.errorf("unrecognized character in action: %#U", r)
+		return l.errorf("unrecognized character at pos %d: %#U", l.pos, r)
 	}
 	return lexStart
 }
@@ -254,63 +333,85 @@ func lexComment(l *lexer) stateFn {
 	return lexStart
 }
 
-/*
-// lexText scans until an opening action delimiter, "{{".
-func lexText(l *lexer) stateFn {
+// lexLineComment scans a single-line comment. The comment marker is known to be present.
+func lexLineComment(l *lexer) stateFn {
+	l.pos += Pos(len(lineComment))
 	for {
-		if strings.HasPrefix(l.input[l.pos:], l.leftDelim) {
-			if l.pos > l.start {
-				l.emit(itemText)
+		r := l.next()
+		switch {
+		case isEndOfLine(r), r == eof:
+			l.backup()
+			l.ignore()
+			return lexStart
+		}
+	}
+	return lexStart
+}
+
+// lexIdentifier scans an alphanumeric.
+func lexIdentifier(l *lexer) stateFn {
+Loop:
+	for {
+		switch r := l.next(); {
+		case isAlphaNumeric(r):
+			// absorb.
+		default:
+			l.backup()
+			word := l.input[l.start:l.pos]
+			lword := strings.ToLower(word)
+			first, _ := utf8.DecodeRuneInString(word)
+			low := unicode.IsLower(first)
+			// fmt.Printf("PLUGH: word=%q\n", word)
+			// fmt.Printf("PLUGH: lword=%q\n", lword)
+			switch {
+			case key[lword] > itemKeyword:
+				l.emit(key[lword])
+			case low && lword == "true", low && lword == "false":
+				l.emit(itemBool)
+			case low:
+				l.emit(itemObjectId)
+			default:
+				l.emit(itemTypeId)
 			}
-			return lexLeftDelim
-		}
-		if l.next() == eof {
-			break
+			break Loop
 		}
 	}
-	// Correctly reached EOF.
-	if l.pos > l.start {
-		l.emit(itemText)
-	}
-	l.emit(itemEOF)
-	return nil
+	return lexStart
 }
 
-// lexLeftDelim scans the left delimiter, which is known to be present.
-func lexLeftDelim(l *lexer) stateFn {
-	l.pos += Pos(len(l.leftDelim))
-	if strings.HasPrefix(l.input[l.pos:], leftComment) {
-		return lexComment
-	}
-	l.emit(itemLeftDelim)
-	l.parenDepth = 0
-	return lexInsideAction
+// lexNumber scans a single numeric constant.
+func lexNumber(l *lexer) stateFn {
+	l.acceptRun(digits)
+	l.emit(itemNumber)
+	return lexStart
 }
 
-// lexComment scans a comment. The left comment marker is known to be present.
-func lexComment(l *lexer) stateFn {
-	l.pos += Pos(len(leftComment))
-	i := strings.Index(l.input[l.pos:], rightComment)
-	if i < 0 {
-		return l.errorf("unclosed comment")
-	}
-	l.pos += Pos(i + len(rightComment))
-	if !strings.HasPrefix(l.input[l.pos:], l.rightDelim) {
-		return l.errorf("comment ends before closing delimiter")
-
-	}
-	l.pos += Pos(len(l.rightDelim))
+// lexQuote scans a quoted string. The opening quote has already been seen.
+func lexQuote(l *lexer) stateFn {
 	l.ignore()
-	return lexText
+Loop:
+	for {
+		switch l.next() {
+		case '\\':
+			if r := l.next(); r != eof {
+				break
+			}
+			fallthrough
+		case eof, '\n':
+			l.emitSoftErrorf("Unterminated string constant")
+			return lexStart
+		case '"':
+			break Loop
+		}
+	}
+	l.backup()
+	l.emit(itemString)
+	l.next()
+	l.ignore()
+	return lexStart
 }
 
-// lexRightDelim scans the right delimiter, which is known to be present.
-func lexRightDelim(l *lexer) stateFn {
-	l.pos += Pos(len(l.rightDelim))
-	l.emit(itemRightDelim)
-	return lexText
-}
-
+/*
 // lexInsideAction scans the elements inside action delimiters.
 func lexInsideAction(l *lexer) stateFn {
 	// Either number, quoted string, or identifier.
@@ -373,45 +474,6 @@ func lexInsideAction(l *lexer) stateFn {
 		return lexInsideAction
 	default:
 		return l.errorf("unrecognized character in action: %#U", r)
-	}
-	return lexInsideAction
-}
-
-// lexSpace scans a run of space characters.
-// One space has already been seen.
-func lexSpace(l *lexer) stateFn {
-	for isSpace(l.peek()) {
-		l.next()
-	}
-	l.emit(itemSpace)
-	return lexInsideAction
-}
-
-// lexIdentifier scans an alphanumeric.
-func lexIdentifier(l *lexer) stateFn {
-Loop:
-	for {
-		switch r := l.next(); {
-		case isAlphaNumeric(r):
-			// absorb.
-		default:
-			l.backup()
-			word := l.input[l.start:l.pos]
-			if !l.atTerminator() {
-				return l.errorf("bad character %#U", r)
-			}
-			switch {
-			case key[word] > itemKeyword:
-				l.emit(key[word])
-			case word[0] == '.':
-				l.emit(itemField)
-			case word == "true", word == "false":
-				l.emit(itemBool)
-			default:
-				l.emit(itemIdentifier)
-			}
-			break Loop
-		}
 	}
 	return lexInsideAction
 }
