@@ -202,9 +202,10 @@ func (l *lexer) lineNumber() int {
 	return 1 + strings.Count(l.input[:l.lastPos], "\n")
 }
 
-// emitSoftErrorf returns an error token.
-func (l *lexer) emitSoftErrorf(format string, args ...interface{}) {
-	l.items <- item{itemError, l.start, l.input[l.start:l.pos], fmt.Sprintf(format, args...)}
+// emitSoftError returns an error token.
+func (l *lexer) emitSoftError(err string, args ...interface{}) {
+	l.items <- item{itemError, l.start, l.input[l.start:l.pos], err}
+	l.start = l.pos
 }
 
 // errorf returns an error token and terminates the scan by passing
@@ -274,13 +275,18 @@ func lexStart(l *lexer) stateFn {
 		l.emit(itemOperator)
 		return lexStart
 	}
+	if strings.HasPrefix(l.input[l.pos:], rightComment) {
+		l.pos += Pos(len(rightComment))
+		l.emitSoftError(fmt.Sprintf("Unmatched %s", rightComment))
+		return lexStart
+	}
 	switch r := l.next(); {
 	case r == eof:
 		l.emit(itemEOF)
 		return nil
 	case isWhitespace(r):
 		return lexWhitespace
-	case r == '_' || unicode.IsLetter(r):
+	case unicode.IsLetter(r):
 		l.backup()
 		return lexIdentifier
 	case unicode.IsDigit(r):
@@ -291,7 +297,8 @@ func lexStart(l *lexer) stateFn {
 	case r == '"':
 		return lexQuote
 	default:
-		return l.errorf("unrecognized character at pos %d: %#U", l.pos, r)
+		// return l.errorf("unrecognized character at pos %d: %#U", l.pos, r)
+		l.emitSoftError(string(r))
 	}
 	return lexStart
 }
@@ -314,7 +321,10 @@ func lexComment(l *lexer) stateFn {
 		left := strings.Index(l.input[l.pos:], leftComment)
 		right := strings.Index(l.input[l.pos:], rightComment)
 		if left < 0 && right < 0 {
-			return l.errorf("unclosed comment")
+			// return l.errorf("EOF in comment")
+			l.pos = Pos(len(l.input))
+			l.emitSoftError("EOF in comment")
+			return lexStart
 		}
 		// next is a comment start
 		if left >= 0 && (right < 0 || left < right) {
@@ -361,8 +371,6 @@ Loop:
 			lword := strings.ToLower(word)
 			first, _ := utf8.DecodeRuneInString(word)
 			low := unicode.IsLower(first)
-			// fmt.Printf("PLUGH: word=%q\n", word)
-			// fmt.Printf("PLUGH: lword=%q\n", lword)
 			switch {
 			case key[lword] > itemKeyword:
 				l.emit(key[lword])
@@ -389,20 +397,54 @@ func lexNumber(l *lexer) stateFn {
 // lexQuote scans a quoted string. The opening quote has already been seen.
 func lexQuote(l *lexer) stateFn {
 	l.ignore()
+	null := false
+	nullEscaped := false
 Loop:
 	for {
 		switch l.next() {
 		case '\\':
 			if r := l.next(); r != eof {
+				if r == 0 {
+					nullEscaped = true
+
+				}
 				break
 			}
 			fallthrough
-		case eof, '\n':
-			l.emitSoftErrorf("Unterminated string constant")
+		case '\n':
+			if null {
+				l.backup()
+				l.emitSoftError("String contains null character.")
+				l.next()
+				l.ignore()
+				return lexStart
+			}
+			if nullEscaped {
+				l.emitSoftError("String contains escaped null character.")
+				return lexStart
+			}
+			l.emitSoftError("Unterminated string constant")
+			return lexStart
+		case eof:
+			l.emitSoftError("EOF in string constant")
 			return lexStart
 		case '"':
 			break Loop
+		case '\000':
+			null = true
 		}
+	}
+	if null {
+		l.emitSoftError("String contains null character.")
+		return lexStart
+	}
+	if nullEscaped {
+		l.emitSoftError("String contains escaped null character.")
+		return lexStart
+	}
+	if len(unescapeString(l.input[l.start:l.pos])) > 1025 {
+		l.emitSoftError("String constant too long")
+		return lexStart
 	}
 	l.backup()
 	l.emit(itemString)
@@ -647,7 +689,7 @@ Loop:
 
 // isWhitespace reports whether r is a whitespace (space or end-of-line) character.
 func isWhitespace(r rune) bool {
-	return isSpace(r) || isEndOfLine(r)
+	return isSpace(r) || isEndOfLine(r) || r == '\f' || r == '\v'
 }
 
 // isSpace reports whether r is a space character.

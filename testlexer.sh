@@ -13,4 +13,6 @@ do
     diff testdata/lex/$f.out $OUTDIR/$f.out
 done
 
-rm -rf $TMPFILE
+echo 'SUCCESS!'
+rm -r $OUTDIR
+rm -f ./printlex

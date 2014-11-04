@@ -27,7 +27,7 @@ func printItem(i item) string {
 	}
 	switch i.typ {
 	case itemError:
-		return fmt.Sprintf("ERROR %q", i.err)
+		return fmt.Sprintf("ERROR \"%s\"", printableString(i.err))
 	case itemBool:
 		return fmt.Sprintf("BOOL_CONST %s", strings.ToLower(i.val))
 	case itemTypeId:
@@ -37,7 +37,7 @@ func printItem(i item) string {
 	case itemAssign:
 		return "ASSIGN"
 	case itemString:
-		return fmt.Sprintf("STR_CONST %q", escapedValue(i.val))
+		return fmt.Sprintf("STR_CONST \"%s\"", printableString(unescapeString(i.val)))
 	case itemNumber:
 		return fmt.Sprintf("INT_CONST %s", i.val)
 	case itemDarrow:
