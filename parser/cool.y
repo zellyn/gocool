@@ -1,0 +1,13 @@
+// Grammar for the Cool language.
+
+%{
+package parser
+%}
+
+%union {
+}
+
+%token ASSIGN BOOL CASE CLASS CMP DARROW ELSE ERR ESAC FI IF IN INHERITS ISVOID LET LOOP NEW NOT NUM NUM OBJECTID OF OP POOL STRING THEN TYPEID WHILE
+
+%%
+TOP: NUM

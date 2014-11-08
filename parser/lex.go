@@ -17,113 +17,30 @@ type Pos int
 
 // item represents a token or text string returned from the scanner.
 type item struct {
-	typ itemType // The type of this item.
-	pos Pos      // The starting position, in bytes, of this item in the input string.
-	val string   // The value of this item.
-	err string   // An optional error message.
+	typ int    // The type of this item.
+	pos Pos    // The starting position, in bytes, of this item in the input string.
+	val string // The value of this item.
+	err string // An optional error message.
 }
 
-/*
-func (i item) String() string {
-	switch {
-	case i.typ == itemEOF:
-		return "EOF"
-	case i.typ == itemError:
-		return i.val
-	case i.typ > itemKeyword:
-		return fmt.Sprintf("<%s>", i.val)
-	case len(i.val) > 10:
-		return fmt.Sprintf("%.10q...", i.val)
-	}
-	return fmt.Sprintf("%q", i.val)
-}
-*/
-
-// itemType identifies the type of lex items.
-type itemType int
-
-const (
-	itemError      itemType = iota // error occurred; value is text of error
-	itemBool                       // boolean constant
-	itemLeftBrace                  // '{'
-	itemRightBrace                 // '}'
-	itemComma                      // ','
-	itemColon                      // ':'
-	itemSemicolon                  // ';'
-	itemLeftParen                  // '('
-	itemRightParen                 // ')'
-	itemCompare                    // <, etc.
-	itemOperator                   // +, etc.
-	itemDot                        // '.'
-	itemAssign                     // <-
-	itemDarrow                     // =>
-	itemAt                         // '@'
-	itemEOF                        // end-of-file
-	itemObjectId                   // Identifier starting with uppercase
-	itemTypeId                     // Identifier starting with lowercase
-	itemNumber                     // simple numeric contant
-	itemText                       // plain text
-	itemWhitespace                 // run of whitespace
-	itemString                     // quoted string
-	// Keywords appear after all the rest.
-	itemKeyword  // used only to delimit the keywords
-	itemElse     // else keyword
-	itemClass    // class keyword
-	itemIf       // if
-	itemThen     // then
-	itemFi       // fi
-	itemLoop     // loop
-	itemPool     // pool
-	itemNew      // new
-	itemIn       // in
-	itemInherits // inherits
-	itemIsvoid   // isvoid
-	itemLet      // let
-	itemWhile    // while
-	itemCase     // case
-	itemEsac     // esac
-	itemOf       // of
-	itemNot      // not
-
-)
-
-var single = map[rune]itemType{
-	'{': itemLeftBrace,
-	'}': itemRightBrace,
-	'(': itemLeftParen,
-	')': itemRightParen,
-	':': itemColon,
-	';': itemSemicolon,
-	'<': itemCompare,
-	'=': itemCompare,
-	',': itemComma,
-	'+': itemOperator,
-	'-': itemOperator,
-	'.': itemDot,
-	'~': itemOperator,
-	'*': itemOperator,
-	'/': itemOperator,
-	'@': itemAt,
-}
-
-var key = map[string]itemType{
-	"else":     itemElse,
-	"class":    itemClass,
-	"if":       itemIf,
-	"then":     itemThen,
-	"fi":       itemFi,
-	"loop":     itemLoop,
-	"pool":     itemPool,
-	"new":      itemNew,
-	"in":       itemIn,
-	"inherits": itemInherits,
-	"isvoid":   itemIsvoid,
-	"let":      itemLet,
-	"while":    itemWhile,
-	"case":     itemCase,
-	"esac":     itemEsac,
-	"of":       itemOf,
-	"not":      itemNot,
+var key = map[string]int{
+	"else":     ELSE,
+	"class":    CLASS,
+	"if":       IF,
+	"then":     THEN,
+	"fi":       FI,
+	"loop":     LOOP,
+	"pool":     POOL,
+	"new":      NEW,
+	"in":       IN,
+	"inherits": INHERITS,
+	"isvoid":   ISVOID,
+	"let":      LET,
+	"while":    WHILE,
+	"case":     CASE,
+	"esac":     ESAC,
+	"of":       OF,
+	"not":      NOT,
 }
 
 const eof = -1
@@ -169,7 +86,7 @@ func (l *lexer) backup() {
 }
 
 // emit passes an item back to the client.
-func (l *lexer) emit(t itemType) {
+func (l *lexer) emit(t int) {
 	l.items <- item{t, l.start, l.input[l.start:l.pos], ""}
 	l.start = l.pos
 }
@@ -204,14 +121,14 @@ func (l *lexer) lineNumber() int {
 
 // emitSoftError returns an error token.
 func (l *lexer) emitSoftError(err string, args ...interface{}) {
-	l.items <- item{itemError, l.start, l.input[l.start:l.pos], err}
+	l.items <- item{ERR, l.start, l.input[l.start:l.pos], err}
 	l.start = l.pos
 }
 
 // errorf returns an error token and terminates the scan by passing
 // back a nil pointer that will be the next state, terminating l.nextItem.
 func (l *lexer) errorf(format string, args ...interface{}) stateFn {
-	l.items <- item{itemError, l.start, l.input[l.start:l.pos], fmt.Sprintf(format, args...)}
+	l.items <- item{ERR, l.start, l.input[l.start:l.pos], fmt.Sprintf(format, args...)}
 	return nil
 }
 
@@ -250,6 +167,9 @@ const (
 	darrow       = "=>"
 	le           = "<="
 	digits       = "0123456789"
+	operators    = "+-*/"
+	comparators  = "<="
+	singleChars  = "{}():;,.~@"
 )
 
 // lexStart is the generic lex state, waiting to see anything at all.
@@ -262,17 +182,17 @@ func lexStart(l *lexer) stateFn {
 	}
 	if strings.HasPrefix(l.input[l.pos:], assign) {
 		l.pos += Pos(len(assign))
-		l.emit(itemAssign)
+		l.emit(ASSIGN)
 		return lexStart
 	}
 	if strings.HasPrefix(l.input[l.pos:], darrow) {
 		l.pos += Pos(len(darrow))
-		l.emit(itemDarrow)
+		l.emit(DARROW)
 		return lexStart
 	}
 	if strings.HasPrefix(l.input[l.pos:], le) {
 		l.pos += Pos(len(le))
-		l.emit(itemOperator)
+		l.emit(OP)
 		return lexStart
 	}
 	if strings.HasPrefix(l.input[l.pos:], rightComment) {
@@ -282,7 +202,7 @@ func lexStart(l *lexer) stateFn {
 	}
 	switch r := l.next(); {
 	case r == eof:
-		l.emit(itemEOF)
+		l.emit(eof)
 		return nil
 	case isWhitespace(r):
 		return lexWhitespace
@@ -292,8 +212,12 @@ func lexStart(l *lexer) stateFn {
 	case unicode.IsDigit(r):
 		l.backup()
 		return lexNumber
-	case single[r] > 0:
-		l.emit(single[r])
+	case strings.ContainsRune(operators, r):
+		l.emit(OP)
+	case strings.ContainsRune(comparators, r):
+		l.emit(CMP)
+	case strings.ContainsRune(singleChars, r):
+		l.emit(int(r))
 	case r == '"':
 		return lexQuote
 	default:
@@ -309,7 +233,7 @@ func lexWhitespace(l *lexer) stateFn {
 	for isWhitespace(l.peek()) {
 		l.next()
 	}
-	l.emit(itemWhitespace)
+	l.ignore()
 	return lexStart
 }
 
@@ -372,14 +296,14 @@ Loop:
 			first, _ := utf8.DecodeRuneInString(word)
 			low := unicode.IsLower(first)
 			switch {
-			case key[lword] > itemKeyword:
+			case key[lword] > 0:
 				l.emit(key[lword])
 			case low && lword == "true", low && lword == "false":
-				l.emit(itemBool)
+				l.emit(BOOL)
 			case low:
-				l.emit(itemObjectId)
+				l.emit(OBJECTID)
 			default:
-				l.emit(itemTypeId)
+				l.emit(TYPEID)
 			}
 			break Loop
 		}
@@ -390,7 +314,7 @@ Loop:
 // lexNumber scans a single numeric constant.
 func lexNumber(l *lexer) stateFn {
 	l.acceptRun(digits)
-	l.emit(itemNumber)
+	l.emit(NUM)
 	return lexStart
 }
 
@@ -447,245 +371,11 @@ Loop:
 		return lexStart
 	}
 	l.backup()
-	l.emit(itemString)
+	l.emit(STRING)
 	l.next()
 	l.ignore()
 	return lexStart
 }
-
-/*
-// lexInsideAction scans the elements inside action delimiters.
-func lexInsideAction(l *lexer) stateFn {
-	// Either number, quoted string, or identifier.
-	// Spaces separate arguments; runs of spaces turn into itemSpace.
-	// Pipe symbols separate and are emitted.
-	if strings.HasPrefix(l.input[l.pos:], l.rightDelim) {
-		if l.parenDepth == 0 {
-			return lexRightDelim
-		}
-		return l.errorf("unclosed left paren")
-	}
-	switch r := l.next(); {
-	case r == eof || isEndOfLine(r):
-		return l.errorf("unclosed action")
-	case isSpace(r):
-		return lexSpace
-	case r == ':':
-		if l.next() != '=' {
-			return l.errorf("expected :=")
-		}
-		l.emit(itemColonEquals)
-	case r == '|':
-		l.emit(itemPipe)
-	case r == '"':
-		return lexQuote
-	case r == '`':
-		return lexRawQuote
-	case r == '$':
-		return lexVariable
-	case r == '\'':
-		return lexChar
-	case r == '.':
-		// special look-ahead for ".field" so we don't break l.backup().
-		if l.pos < Pos(len(l.input)) {
-			r := l.input[l.pos]
-			if r < '0' || '9' < r {
-				return lexField
-			}
-		}
-		fallthrough // '.' can start a number.
-	case r == '+' || r == '-' || ('0' <= r && r <= '9'):
-		l.backup()
-		return lexNumber
-	case isAlphaNumeric(r):
-		l.backup()
-		return lexIdentifier
-	case r == '(':
-		l.emit(itemLeftParen)
-		l.parenDepth++
-		return lexInsideAction
-	case r == ')':
-		l.emit(itemRightParen)
-		l.parenDepth--
-		if l.parenDepth < 0 {
-			return l.errorf("unexpected right paren %#U", r)
-		}
-		return lexInsideAction
-	case r <= unicode.MaxASCII && unicode.IsPrint(r):
-		l.emit(itemChar)
-		return lexInsideAction
-	default:
-		return l.errorf("unrecognized character in action: %#U", r)
-	}
-	return lexInsideAction
-}
-
-// lexField scans a field: .Alphanumeric.
-// The . has been scanned.
-func lexField(l *lexer) stateFn {
-	return lexFieldOrVariable(l, itemField)
-}
-
-// lexVariable scans a Variable: $Alphanumeric.
-// The $ has been scanned.
-func lexVariable(l *lexer) stateFn {
-	if l.atTerminator() { // Nothing interesting follows -> "$".
-		l.emit(itemVariable)
-		return lexInsideAction
-	}
-	return lexFieldOrVariable(l, itemVariable)
-}
-
-// lexVariable scans a field or variable: [.$]Alphanumeric.
-// The . or $ has been scanned.
-func lexFieldOrVariable(l *lexer, typ itemType) stateFn {
-	if l.atTerminator() { // Nothing interesting follows -> "." or "$".
-		if typ == itemVariable {
-			l.emit(itemVariable)
-		} else {
-			l.emit(itemDot)
-		}
-		return lexInsideAction
-	}
-	var r rune
-	for {
-		r = l.next()
-		if !isAlphaNumeric(r) {
-			l.backup()
-			break
-		}
-	}
-	if !l.atTerminator() {
-		return l.errorf("bad character %#U", r)
-	}
-	l.emit(typ)
-	return lexInsideAction
-}
-
-// atTerminator reports whether the input is at valid termination character to
-// appear after an identifier. Breaks .X.Y into two pieces. Also catches cases
-// like "$x+2" not being acceptable without a space, in case we decide one
-// day to implement arithmetic.
-func (l *lexer) atTerminator() bool {
-	r := l.peek()
-	if isSpace(r) || isEndOfLine(r) {
-		return true
-	}
-	switch r {
-	case eof, '.', ',', '|', ':', ')', '(':
-		return true
-	}
-	// Does r start the delimiter? This can be ambiguous (with delim=="//", $x/2 will
-	// succeed but should fail) but only in extremely rare cases caused by willfully
-	// bad choice of delimiter.
-	if rd, _ := utf8.DecodeRuneInString(l.rightDelim); rd == r {
-		return true
-	}
-	return false
-}
-
-// lexChar scans a character constant. The initial quote is already
-// scanned. Syntax checking is done by the parser.
-func lexChar(l *lexer) stateFn {
-Loop:
-	for {
-		switch l.next() {
-		case '\\':
-			if r := l.next(); r != eof && r != '\n' {
-				break
-			}
-			fallthrough
-		case eof, '\n':
-			return l.errorf("unterminated character constant")
-		case '\'':
-			break Loop
-		}
-	}
-	l.emit(itemCharConstant)
-	return lexInsideAction
-}
-
-// lexNumber scans a number: decimal, octal, hex, float, or imaginary. This
-// isn't a perfect number scanner - for instance it accepts "." and "0x0.2"
-// and "089" - but when it's wrong the input is invalid and the parser (via
-// strconv) will notice.
-func lexNumber(l *lexer) stateFn {
-	if !l.scanNumber() {
-		return l.errorf("bad number syntax: %q", l.input[l.start:l.pos])
-	}
-	if sign := l.peek(); sign == '+' || sign == '-' {
-		// Complex: 1+2i. No spaces, must end in 'i'.
-		if !l.scanNumber() || l.input[l.pos-1] != 'i' {
-			return l.errorf("bad number syntax: %q", l.input[l.start:l.pos])
-		}
-		l.emit(itemComplex)
-	} else {
-		l.emit(itemNumber)
-	}
-	return lexInsideAction
-}
-
-func (l *lexer) scanNumber() bool {
-	// Optional leading sign.
-	l.accept("+-")
-	// Is it hex?
-	digits := "0123456789"
-	if l.accept("0") && l.accept("xX") {
-		digits = "0123456789abcdefABCDEF"
-	}
-	l.acceptRun(digits)
-	if l.accept(".") {
-		l.acceptRun(digits)
-	}
-	if l.accept("eE") {
-		l.accept("+-")
-		l.acceptRun("0123456789")
-	}
-	// Is it imaginary?
-	l.accept("i")
-	// Next thing mustn't be alphanumeric.
-	if isAlphaNumeric(l.peek()) {
-		l.next()
-		return false
-	}
-	return true
-}
-
-// lexQuote scans a quoted string.
-func lexQuote(l *lexer) stateFn {
-Loop:
-	for {
-		switch l.next() {
-		case '\\':
-			if r := l.next(); r != eof && r != '\n' {
-				break
-			}
-			fallthrough
-		case eof, '\n':
-			return l.errorf("unterminated quoted string")
-		case '"':
-			break Loop
-		}
-	}
-	l.emit(itemString)
-	return lexInsideAction
-}
-
-// lexRawQuote scans a raw quoted string.
-func lexRawQuote(l *lexer) stateFn {
-Loop:
-	for {
-		switch l.next() {
-		case eof, '\n':
-			return l.errorf("unterminated raw quoted string")
-		case '`':
-			break Loop
-		}
-	}
-	l.emit(itemRawString)
-	return lexInsideAction
-}
-*/
 
 // isWhitespace reports whether r is a whitespace (space or end-of-line) character.
 func isWhitespace(r rune) bool {

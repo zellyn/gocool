@@ -7,15 +7,9 @@ import (
 	"strings"
 )
 
-var reprs = map[itemType]string{}
+var reprs = map[int]string{}
 
 func init() {
-	for k, v := range single {
-		if v != itemOperator && v != itemCompare {
-			reprs[v] = fmt.Sprintf("'%c'", k)
-		}
-	}
-
 	for k, v := range key {
 		reprs[v] = strings.ToUpper(k)
 	}
@@ -25,24 +19,27 @@ func printItem(i item) string {
 	if s := reprs[i.typ]; s != "" {
 		return s
 	}
+	if strings.ContainsRune(singleChars, rune(i.typ)) {
+		return fmt.Sprintf("'%c'", i.typ)
+	}
 	switch i.typ {
-	case itemError:
+	case ERR:
 		return fmt.Sprintf("ERROR \"%s\"", printableString(i.err))
-	case itemBool:
+	case BOOL:
 		return fmt.Sprintf("BOOL_CONST %s", strings.ToLower(i.val))
-	case itemTypeId:
+	case TYPEID:
 		return fmt.Sprintf("TYPEID %s", i.val)
-	case itemObjectId:
+	case OBJECTID:
 		return fmt.Sprintf("OBJECTID %s", i.val)
-	case itemAssign:
+	case ASSIGN:
 		return "ASSIGN"
-	case itemString:
+	case STRING:
 		return fmt.Sprintf("STR_CONST \"%s\"", printableString(unescapeString(i.val)))
-	case itemNumber:
+	case NUM:
 		return fmt.Sprintf("INT_CONST %s", i.val)
-	case itemDarrow:
+	case DARROW:
 		return "DARROW"
-	case itemCompare, itemOperator:
+	case CMP, OP:
 		if i.val == "<=" {
 			return "LE"
 		}
@@ -57,11 +54,8 @@ func LexItems(name, input string) []string {
 	l := lex(name, input)
 	for {
 		i := l.nextItem()
-		if i.typ == itemEOF {
+		if i.typ == eof {
 			break
-		}
-		if i.typ == itemWhitespace {
-			continue
 		}
 		s := fmt.Sprintf("#%d %s", l.lineNumber(), printItem(i))
 		result = append(result, s)
