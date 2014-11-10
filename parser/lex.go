@@ -1,7 +1,9 @@
-// Package lex lexes Cool source files.
+// A hand-built lexer for Cool source files.
 //
 // The lexer is copied from
 // http://golang.org/src/pkg/text/template/parse/lex.go and modified.
+//
+// The uppercase term constants are defined in parser.go, the yacc output.
 
 package parser
 
