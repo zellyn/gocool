@@ -39,7 +39,7 @@ func printItem(i item) string {
 		return fmt.Sprintf("INT_CONST %s", i.val)
 	case DARROW:
 		return "DARROW"
-	case CMP, OP:
+	case CMP:
 		if i.val == "<=" {
 			return "LE"
 		}
@@ -51,7 +51,7 @@ func printItem(i item) string {
 
 func LexItems(name, input string) []string {
 	result := []string{}
-	l := lex(name, input)
+	l := newLex(name, input)
 	for {
 		i := l.nextItem()
 		if i.typ == eof {

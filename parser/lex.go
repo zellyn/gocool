@@ -61,6 +61,7 @@ type lexer struct {
 	lastPos    Pos       // position of most recent item returned by nextItem
 	items      chan item // channel of scanned items
 	parenDepth int       // nesting depth of ( ) exprs
+	prog       *Program  // The parsed program
 }
 
 // next returns the next rune in the input.
@@ -142,7 +143,7 @@ func (l *lexer) nextItem() item {
 }
 
 // lex creates a new scanner for the input string.
-func lex(name, input string) *lexer {
+func newLex(name, input string) *lexer {
 	l := &lexer{
 		name:  name,
 		input: input,
@@ -194,7 +195,7 @@ func lexStart(l *lexer) stateFn {
 	}
 	if strings.HasPrefix(l.input[l.pos:], le) {
 		l.pos += Pos(len(le))
-		l.emit(OP)
+		l.emit(CMP)
 		return lexStart
 	}
 	if strings.HasPrefix(l.input[l.pos:], rightComment) {
@@ -215,7 +216,7 @@ func lexStart(l *lexer) stateFn {
 		l.backup()
 		return lexNumber
 	case strings.ContainsRune(operators, r):
-		l.emit(OP)
+		l.emit(int(r))
 	case strings.ContainsRune(comparators, r):
 		l.emit(CMP)
 	case strings.ContainsRune(singleChars, r):
@@ -397,4 +398,14 @@ func isEndOfLine(r rune) bool {
 // isAlphaNumeric reports whether r is an alphabetic, digit, or underscore.
 func isAlphaNumeric(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func (l *lexer) Error(e string) {
+	fmt.Println(e)
+}
+
+func (l *lexer) Lex(lval *yySymType) int {
+	i := l.nextItem()
+	*lval = yySymType{str: i.val}
+	return i.typ
 }

@@ -3,7 +3,7 @@
 //	% go generate
 
 //go:generate -command yacc go tool yacc
-//go:generate yacc -o parser.go cool.y
+//go:generate yacc cool.y
 
 // Package parser contains a (hand-built) lexer and (yacc) parser for
 // the Cool programming language.

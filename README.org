@@ -1,0 +1,7 @@
+gocool
+======
+
+Go implementation of the Cool programming language.
+
+* TODOs
+- [ ] Check that "self" cannot be used as an attribute, function parameter, case variable, etc.
