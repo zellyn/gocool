@@ -83,7 +83,7 @@ const (
 	New                   // new objectid
 	Isvoid                // isvoid Left
 	Block                 // { Expressions }
-	If                    // if statement
+	Cond                  // if statement
 	Loop                  // while loop
 	Dispatch              // expr.name(params) or name(params)
 	StaticDispatch        // expr@type.name(params)
@@ -112,7 +112,7 @@ var exprOpString = map[ExprOp]string{
 	New:            "new",
 	Isvoid:         "isvoid",
 	Block:          "block",
-	If:             "if",
+	Cond:           "cond",
 	Loop:           "loop",
 	Dispatch:       "dispatch",
 	StaticDispatch: "static_dispatch",
@@ -151,7 +151,7 @@ func MakeLet(bindings []*Expr, body *Expr) *Expr {
 			Type:  bindings[0].Type,
 			Left:  bindings[0].Left,
 			Right: body,
-			Base:  Base{Line: bindings[0].Line},
+			Base:  Base{Line: body.Line},
 		}
 	}
 	Right := MakeLet(bindings[1:], body)
@@ -278,7 +278,7 @@ func (e *Expr) dump(d *dumper) {
 		d.out()
 	case StringConst:
 		d.in()
-		d.println(e.Text)
+		d.printf("\"%s\"\n", printableString(unescapeString(e.Text)))
 		d.out()
 	case Dispatch:
 		d.in()
@@ -320,6 +320,10 @@ func (e *Expr) dump(d *dumper) {
 		d.in()
 		e.Left.dump(d)
 		d.out()
+	case New:
+		d.in()
+		d.println(e.Type)
+		d.out()
 	case Let:
 		d.in()
 		d.println(e.Text)
@@ -327,8 +331,15 @@ func (e *Expr) dump(d *dumper) {
 		e.Left.dump(d)
 		e.Right.dump(d)
 		d.out()
+	case Cond:
+		d.in()
+		e.Left.dump(d)
+		e.Right.dump(d)
+		e.Else.dump(d)
+		d.out()
+
 	}
-	if e.Type == "" || e.Op == StaticDispatch || e.Op == Let {
+	if e.Type == "" || e.Op == StaticDispatch || e.Op == Let || e.Op == New {
 		d.println(": _no_type")
 	} else {
 		d.printf(": %s\n", e.Type)

@@ -172,19 +172,19 @@ expr:
 	|       expr '.' OBJECTID '(' maybeexprs ')'
 		{ $$ = &Expr{Op: Dispatch, Left: $1, Text: $3, Exprs: $5, Base:Base{Line:$<line>6}} }
 	|       OBJECTID '(' maybeexprs ')'
-		{ $$ = &Expr{Op: Dispatch, Left: &Expr{Op:Object, Text: "self"}, Text: $1, Exprs: $3, Base:Base{Line:$<line>4}} }
+		{ $$ = &Expr{Op: Dispatch, Left: &Expr{Op:Object, Text: "self", Base:Base{Line: $<line>1}}, Text: $1, Exprs: $3, Base:Base{Line:$<line>4}} }
 	|       IF expr THEN expr ELSE expr FI
-		{ $$ = &Expr{Op: If, Left: $2, Right: $4, Else: $6, Base:Base{Line:$<line>7}} }
+		{ $$ = &Expr{Op: Cond, Left: $2, Right: $4, Else: $6, Base:Base{Line:$<line>7}} }
 	|       WHILE expr LOOP expr POOL
 		{ $$ = &Expr{Op: Loop, Left: $2, Right: $4, Base:Base{Line:$<line>5}} }
 	|       '{' exprlist '}'
 		{ $$ = &Expr{Op: Block, Exprs: $2, Base:Base{Line:$<line>3}} }
 	|       LET bindings IN expr
-		{ $$ = MakeLet($2, $4, ) }
+		{ $$ = MakeLet($2, $4) }
 	|       CASE expr OF branches ESAC
 		{ $$ = &Expr{Op: TypCase, Left: $2, Exprs: $4, Base:Base{Line:$<line>5}} }
 	|       NEW TYPEID
-		{ $$ = &Expr{Op: New, Text: $2, Base:Base{Line:$<line>2}} }
+		{ $$ = &Expr{Op: New, Type: $2, Base:Base{Line:$<line>2}} }
 	|       ISVOID expr
 		{ $$ = &Expr{Op: Isvoid, Left: $2, Base:Base{Line:$2.Line}} }
 	|       expr '+' expr

@@ -569,12 +569,12 @@ yydefault:
 	case 21:
 		//line cool.y:175
 		{
-			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self"}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self", Base: Base{Line: yyS[yypt-3].line}}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 22:
 		//line cool.y:177
 		{
-			yyVAL.expr = &Expr{Op: If, Left: yyS[yypt-5].expr, Right: yyS[yypt-3].expr, Else: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: Cond, Left: yyS[yypt-5].expr, Right: yyS[yypt-3].expr, Else: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 23:
 		//line cool.y:179
@@ -599,7 +599,7 @@ yydefault:
 	case 27:
 		//line cool.y:187
 		{
-			yyVAL.expr = &Expr{Op: New, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: New, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 28:
 		//line cool.y:189
