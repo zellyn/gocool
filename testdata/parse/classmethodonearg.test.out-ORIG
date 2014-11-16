@@ -14,7 +14,7 @@ _program
         a
         Int
       SELF_TYPE
-      #4
+      #5
       _object
         self
       : _no_type
