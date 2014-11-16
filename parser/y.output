@@ -264,7 +264,7 @@ state 31
 
 	ASSIGN  shift 54
 	(  shift 55
-	.  reduce 37 (src line 206)
+	.  reduce 37 (src line 209)
 
 
 state 32
@@ -313,7 +313,7 @@ state 34
 	expr:  {.exprlist } 
 	exprlist: .    (45)
 
-	.  reduce 45 (src line 230)
+	.  reduce 45 (src line 233)
 
 	exprlist  goto 58
 
@@ -441,19 +441,19 @@ state 41
 state 42
 	expr:  NUM.    (38)
 
-	.  reduce 38 (src line 208)
+	.  reduce 38 (src line 211)
 
 
 state 43
 	expr:  STRING.    (39)
 
-	.  reduce 39 (src line 210)
+	.  reduce 39 (src line 213)
 
 
 state 44
 	expr:  BOOL.    (40)
 
-	.  reduce 40 (src line 212)
+	.  reduce 40 (src line 215)
 
 
 state 45
@@ -627,7 +627,7 @@ state 55
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 216)
+	.  reduce 41 (src line 219)
 
 	expr  goto 79
 	exprs  goto 78
@@ -710,7 +710,7 @@ state 59
 state 60
 	bindings:  binding.    (47)
 
-	.  reduce 47 (src line 237)
+	.  reduce 47 (src line 240)
 
 
 state 61
@@ -969,7 +969,7 @@ state 78
 	exprs:  exprs., expr 
 
 	,  shift 93
-	.  reduce 42 (src line 219)
+	.  reduce 42 (src line 222)
 
 
 state 79
@@ -989,7 +989,7 @@ state 79
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 43 (src line 223)
+	.  reduce 43 (src line 226)
 
 
 state 80
@@ -1158,7 +1158,7 @@ state 91
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 216)
+	.  reduce 41 (src line 219)
 
 	expr  goto 79
 	exprs  goto 78
@@ -1236,7 +1236,7 @@ state 95
 state 96
 	exprlist:  exprlist expr ;.    (46)
 
-	.  reduce 46 (src line 233)
+	.  reduce 46 (src line 236)
 
 
 state 97
@@ -1262,7 +1262,7 @@ state 97
 state 98
 	bindings:  bindings , binding.    (48)
 
-	.  reduce 48 (src line 240)
+	.  reduce 48 (src line 243)
 
 
 state 99
@@ -1287,7 +1287,7 @@ state 100
 state 101
 	branches:  branch.    (50)
 
-	.  reduce 50 (src line 249)
+	.  reduce 50 (src line 252)
 
 
 state 102
@@ -1335,7 +1335,7 @@ state 106
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 44 (src line 226)
+	.  reduce 44 (src line 229)
 
 
 state 107
@@ -1368,7 +1368,7 @@ state 108
 state 109
 	binding:  OBJECTID : TYPEID maybeassign.    (49)
 
-	.  reduce 49 (src line 244)
+	.  reduce 49 (src line 247)
 
 
 state 110
@@ -1380,7 +1380,7 @@ state 110
 state 111
 	branches:  branches branch.    (51)
 
-	.  reduce 51 (src line 252)
+	.  reduce 51 (src line 255)
 
 
 state 112
@@ -1414,7 +1414,7 @@ state 114
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 216)
+	.  reduce 41 (src line 219)
 
 	expr  goto 79
 	exprs  goto 78
@@ -1518,7 +1518,7 @@ state 122
 state 123
 	branch:  OBJECTID : TYPEID DARROW expr ;.    (52)
 
-	.  reduce 52 (src line 256)
+	.  reduce 52 (src line 259)
 
 
 44 terminals, 19 nonterminals

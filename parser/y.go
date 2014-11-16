@@ -645,84 +645,85 @@ yydefault:
 		//line cool.y:205
 		{
 			yyVAL.expr = yyS[yypt-1].expr
+			yyVAL.expr.Line = yyS[yypt-0].line
 		}
 	case 37:
-		//line cool.y:207
+		//line cool.y:210
 		{
 			yyVAL.expr = &Expr{Op: Object, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 38:
-		//line cool.y:209
+		//line cool.y:212
 		{
 			yyVAL.expr = &Expr{Op: IntConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 39:
-		//line cool.y:211
+		//line cool.y:214
 		{
 			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 40:
-		//line cool.y:213
+		//line cool.y:216
 		{
 			yyVAL.expr = &Expr{Op: BoolConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 41:
-		//line cool.y:218
+		//line cool.y:221
 		{
 			yyVAL.exprs = nil
 		}
 	case 42:
-		//line cool.y:220
+		//line cool.y:223
 		{
 			yyVAL.exprs = yyS[yypt-0].exprs
 		}
 	case 43:
-		//line cool.y:225
+		//line cool.y:228
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 44:
-		//line cool.y:227
+		//line cool.y:230
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 45:
-		//line cool.y:232
+		//line cool.y:235
 		{
 			yyVAL.exprs = nil
 		}
 	case 46:
-		//line cool.y:234
+		//line cool.y:237
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-1].expr)
 		}
 	case 47:
-		//line cool.y:239
+		//line cool.y:242
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 48:
-		//line cool.y:241
+		//line cool.y:244
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 49:
-		//line cool.y:246
+		//line cool.y:249
 		{
 			yyVAL.expr = &Expr{Op: Placeholder, Text: yyS[yypt-3].str, Type: yyS[yypt-1].str, Left: yyS[yypt-0].expr.Left, Base: Base{Line: yyS[yypt-4].line}}
 		}
 	case 50:
-		//line cool.y:251
+		//line cool.y:254
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 51:
-		//line cool.y:253
+		//line cool.y:256
 		{
 			yyVAL.exprs = append(yyS[yypt-1].exprs, yyS[yypt-0].expr)
 		}
 	case 52:
-		//line cool.y:258
+		//line cool.y:261
 		{
 			yyVAL.expr = &Expr{Op: Branch, Text: yyS[yypt-5].str, Type: yyS[yypt-3].str, Left: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}

@@ -202,7 +202,10 @@ expr:
 	|       NOT expr
 		{ $$ = &Expr{Op: Comp, Left: $2, Base:Base{Line:$2.Line}} }
 	|       '(' expr ')'
-		{ $$ = $2 }
+		{
+		    $$ = $2
+		    $$.Line = $<line>3
+		}
 	|       OBJECTID
 		{ $$ = &Expr{Op: Object, Text: $1, Base:Base{Line:$<line>1}} }
 	|       NUM

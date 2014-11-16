@@ -337,11 +337,23 @@ func (e *Expr) dump(d *dumper) {
 		e.Right.dump(d)
 		e.Else.dump(d)
 		d.out()
-
+	case TypCase:
+		d.in()
+		e.Left.dump(d)
+		for _, e2 := range e.Exprs {
+			e2.dump(d)
+		}
+		d.out()
+	case Branch:
+		d.in()
+		d.println(e.Text)
+		d.println(e.Type)
+		e.Left.dump(d)
+		d.out()
 	}
 	if e.Type == "" || e.Op == StaticDispatch || e.Op == Let || e.Op == New {
 		d.println(": _no_type")
-	} else {
+	} else if e.Op != Branch {
 		d.printf(": %s\n", e.Type)
 	}
 }
