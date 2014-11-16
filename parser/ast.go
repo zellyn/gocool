@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"strings"
 )
 
 type Base struct {
-	line int
+	Line int
 }
 
 type Program struct {
@@ -83,19 +84,21 @@ const (
 	Isvoid                // isvoid Left
 	Block                 // { Expressions }
 	If                    // if statement
-	While                 // while loop
+	Loop                  // while loop
 	Dispatch              // expr.name(params) or name(params)
 	StaticDispatch        // expr@type.name(params)
 	Let                   // Let expression
 	Assign                // x <- y
 	TypCase               // Type case
 	Branch                // Individual branch in a type case
+	NoExpr                // No expression (eg. optional assign is missing)
 )
 
 var exprOpString = map[ExprOp]string{
-	IntConst:       "int_const",
-	StringConst:    "string_const",
-	BoolConst:      "bool_const",
+	Placeholder:    "[PLACEHOLDER]",
+	IntConst:       "int",
+	StringConst:    "string",
+	BoolConst:      "bool",
 	Plus:           "plus",
 	Sub:            "sub",
 	Mul:            "mul",
@@ -110,13 +113,14 @@ var exprOpString = map[ExprOp]string{
 	Isvoid:         "isvoid",
 	Block:          "block",
 	If:             "if",
-	While:          "while",
+	Loop:           "loop",
 	Dispatch:       "dispatch",
 	StaticDispatch: "static_dispatch",
 	Let:            "let",
 	Assign:         "assign",
 	TypCase:        "typcase",
 	Branch:         "branch",
+	NoExpr:         "no_expr",
 }
 
 func OpForCmp(cmp string) ExprOp {
@@ -141,9 +145,24 @@ func (op ExprOp) String() string {
 
 func MakeLet(bindings []*Expr, body *Expr) *Expr {
 	if len(bindings) == 1 {
-		return &Expr{Op: Let, Type: bindings[0].Type, Text: bindings[0].Text, Left: body}
+		return &Expr{
+			Op:    Let,
+			Text:  bindings[0].Text,
+			Type:  bindings[0].Type,
+			Left:  bindings[0].Left,
+			Right: body,
+			Base:  Base{Line: bindings[0].Line},
+		}
 	}
-	return &Expr{Op: Let, Type: bindings[0].Type, Text: bindings[0].Text, Left: MakeLet(bindings[1:], body)}
+	Right := MakeLet(bindings[1:], body)
+	return &Expr{
+		Op:    Let,
+		Text:  bindings[0].Text,
+		Type:  bindings[0].Type,
+		Left:  bindings[0].Left,
+		Right: Right,
+		Base:  Base{Right.Line},
+	}
 }
 
 type dumper struct {
@@ -179,7 +198,7 @@ func (d *dumper) println(s string) int {
 
 func (p *Program) Dump() string {
 	d := newDumper()
-	d.printf("#%d\n", p.line)
+	d.printf("#%d\n", p.Line)
 	d.println("_program")
 	d.in()
 	for _, c := range p.Classes {
@@ -189,11 +208,138 @@ func (p *Program) Dump() string {
 }
 
 func (c *Class) dump(d *dumper) {
-	d.printf("#%d\n", c.line)
+	d.printf("#%d\n", c.Line)
 	d.println("_class")
 	d.in()
 	defer d.out()
 	d.println(c.Name)
 	d.println(c.Parent)
 	d.printf("%q\n", c.Filename)
+	d.println("(")
+
+	for _, f := range c.Features {
+		f.dump(d)
+	}
+	d.println(")")
+}
+
+func (f *Feature) dump(d *dumper) {
+	if f.Method != nil {
+		f.Method.dump(d)
+	}
+	if f.Attr != nil {
+		f.Attr.dump(d)
+	}
+}
+
+func (m *Method) dump(d *dumper) {
+	d.printf("#%d\n", m.Line)
+	d.println("_method")
+	d.in()
+	defer d.out()
+	d.println(m.Name)
+	for _, f := range m.Formals {
+		f.dump(d)
+	}
+	d.println(m.Type)
+	m.Expr.dump(d)
+}
+
+func (a *Attr) dump(d *dumper) {
+	d.printf("#%d\n", a.Line)
+	d.println("_attr")
+	d.in()
+	defer d.out()
+	d.println(a.Name)
+	d.println(a.Type)
+	a.Init.dump(d)
+}
+
+func (e *Expr) dump(d *dumper) {
+	d.printf("#%d\n", e.Line)
+	d.printf("_%s\n", e.Op)
+	switch e.Op {
+	case Assign:
+		d.in()
+		d.println(e.Text)
+		e.Left.dump(d)
+		d.out()
+	case IntConst:
+		d.in()
+		d.println(e.Text)
+		d.out()
+	case BoolConst:
+		d.in()
+		if strings.ToLower(e.Text) == "false" {
+			d.println("0")
+		} else {
+			d.println("1")
+		}
+		d.out()
+	case StringConst:
+		d.in()
+		d.println(e.Text)
+		d.out()
+	case Dispatch:
+		d.in()
+		e.Left.dump(d)
+		d.println(e.Text)
+		d.println("(")
+		for _, e2 := range e.Exprs {
+			e2.dump(d)
+		}
+		d.println(")")
+		d.out()
+	case StaticDispatch:
+		d.in()
+		e.Left.dump(d)
+		d.println(e.Type)
+		d.println(e.Text)
+		d.println("(")
+		for _, e2 := range e.Exprs {
+			e2.dump(d)
+		}
+		d.println(")")
+		d.out()
+	case Object:
+		d.in()
+		d.println(e.Text)
+		d.out()
+	case Block:
+		d.in()
+		for _, e2 := range e.Exprs {
+			e2.dump(d)
+		}
+		d.out()
+	case Plus, Sub, Mul, Divide, Leq, Eq, Lt, Loop:
+		d.in()
+		e.Left.dump(d)
+		e.Right.dump(d)
+		d.out()
+	case Neg, Comp, Isvoid:
+		d.in()
+		e.Left.dump(d)
+		d.out()
+	case Let:
+		d.in()
+		d.println(e.Text)
+		d.println(e.Type)
+		e.Left.dump(d)
+		e.Right.dump(d)
+		d.out()
+	}
+	if e.Type == "" || e.Op == StaticDispatch || e.Op == Let {
+		d.println(": _no_type")
+	} else {
+		d.printf(": %s\n", e.Type)
+	}
+}
+
+func (f *Formal) dump(d *dumper) {
+	d.printf("#%d\n", f.Line)
+	d.println("_formal")
+	d.in()
+	defer d.out()
+	d.println(f.Name)
+	d.println(f.Type)
 }

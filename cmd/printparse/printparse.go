@@ -24,5 +24,5 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	fmt.Println(prog.Dump())
+	fmt.Print(prog.Dump())
 }

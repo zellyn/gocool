@@ -3,7 +3,7 @@ state 0
 	$accept: .prog $end 
 	classes: .    (2)
 
-	.  reduce 2 (src line 91)
+	.  reduce 2 (src line 92)
 
 	prog  goto 1
 	classes  goto 2
@@ -20,14 +20,14 @@ state 2
 	classes:  classes.class 
 
 	CLASS  shift 4
-	.  reduce 1 (src line 83)
+	.  reduce 1 (src line 84)
 
 	class  goto 3
 
 state 3
 	classes:  classes class.    (3)
 
-	.  reduce 3 (src line 94)
+	.  reduce 3 (src line 95)
 
 
 state 4
@@ -42,7 +42,7 @@ state 5
 	inherits: .    (5)
 
 	INHERITS  shift 7
-	.  reduce 5 (src line 103)
+	.  reduce 5 (src line 107)
 
 	inherits  goto 6
 
@@ -64,14 +64,14 @@ state 8
 	class:  CLASS TYPEID inherits {.features } ; 
 	features: .    (7)
 
-	.  reduce 7 (src line 110)
+	.  reduce 7 (src line 114)
 
 	features  goto 10
 
 state 9
 	inherits:  INHERITS TYPEID.    (6)
 
-	.  reduce 6 (src line 106)
+	.  reduce 6 (src line 110)
 
 
 state 10
@@ -94,7 +94,7 @@ state 11
 state 12
 	features:  features feature.    (8)
 
-	.  reduce 8 (src line 113)
+	.  reduce 8 (src line 117)
 
 
 state 13
@@ -109,7 +109,7 @@ state 13
 state 14
 	class:  CLASS TYPEID inherits { features } ;.    (4)
 
-	.  reduce 4 (src line 98)
+	.  reduce 4 (src line 102)
 
 
 state 15
@@ -117,7 +117,7 @@ state 15
 	formals: .    (13)
 
 	OBJECTID  shift 19
-	.  reduce 13 (src line 131)
+	.  reduce 13 (src line 138)
 
 	formals  goto 17
 	formal  goto 18
@@ -140,7 +140,7 @@ state 18
 	formals:  formal.commaformals 
 	commaformals: .    (15)
 
-	.  reduce 15 (src line 138)
+	.  reduce 15 (src line 152)
 
 	commaformals  goto 22
 
@@ -156,7 +156,7 @@ state 20
 	maybeassign: .    (11)
 
 	ASSIGN  shift 25
-	.  reduce 11 (src line 124)
+	.  reduce 11 (src line 131)
 
 	maybeassign  goto 24
 
@@ -172,7 +172,7 @@ state 22
 	commaformals:  commaformals., formal 
 
 	,  shift 27
-	.  reduce 14 (src line 134)
+	.  reduce 14 (src line 141)
 
 
 state 23
@@ -228,13 +228,13 @@ state 27
 state 28
 	formal:  OBJECTID : TYPEID.    (17)
 
-	.  reduce 17 (src line 145)
+	.  reduce 17 (src line 162)
 
 
 state 29
 	feature:  OBJECTID : TYPEID maybeassign ;.    (10)
 
-	.  reduce 10 (src line 120)
+	.  reduce 10 (src line 127)
 
 
 state 30
@@ -254,7 +254,7 @@ state 30
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 12 (src line 127)
+	.  reduce 12 (src line 134)
 
 
 state 31
@@ -264,7 +264,7 @@ state 31
 
 	ASSIGN  shift 54
 	(  shift 55
-	.  reduce 37 (src line 189)
+	.  reduce 37 (src line 206)
 
 
 state 32
@@ -313,7 +313,7 @@ state 34
 	expr:  {.exprlist } 
 	exprlist: .    (45)
 
-	.  reduce 45 (src line 213)
+	.  reduce 45 (src line 230)
 
 	exprlist  goto 58
 
@@ -441,19 +441,19 @@ state 41
 state 42
 	expr:  NUM.    (38)
 
-	.  reduce 38 (src line 191)
+	.  reduce 38 (src line 208)
 
 
 state 43
 	expr:  STRING.    (39)
 
-	.  reduce 39 (src line 193)
+	.  reduce 39 (src line 210)
 
 
 state 44
 	expr:  BOOL.    (40)
 
-	.  reduce 40 (src line 195)
+	.  reduce 40 (src line 212)
 
 
 state 45
@@ -466,7 +466,7 @@ state 45
 state 46
 	commaformals:  commaformals , formal.    (16)
 
-	.  reduce 16 (src line 141)
+	.  reduce 16 (src line 155)
 
 
 state 47
@@ -627,7 +627,7 @@ state 55
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 199)
+	.  reduce 41 (src line 216)
 
 	expr  goto 79
 	exprs  goto 78
@@ -710,7 +710,7 @@ state 59
 state 60
 	bindings:  binding.    (47)
 
-	.  reduce 47 (src line 220)
+	.  reduce 47 (src line 237)
 
 
 state 61
@@ -744,7 +744,7 @@ state 62
 state 63
 	expr:  NEW TYPEID.    (27)
 
-	.  reduce 27 (src line 169)
+	.  reduce 27 (src line 186)
 
 
 state 64
@@ -759,7 +759,7 @@ state 64
 
 	@  shift 47
 	.  shift 48
-	.  reduce 28 (src line 171)
+	.  reduce 28 (src line 188)
 
 
 state 65
@@ -774,7 +774,7 @@ state 65
 
 	@  shift 47
 	.  shift 48
-	.  reduce 33 (src line 181)
+	.  reduce 33 (src line 198)
 
 
 state 66
@@ -794,7 +794,7 @@ state 66
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 35 (src line 185)
+	.  reduce 35 (src line 202)
 
 
 state 67
@@ -867,7 +867,7 @@ state 71
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 29 (src line 173)
+	.  reduce 29 (src line 190)
 
 
 state 72
@@ -884,7 +884,7 @@ state 72
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 30 (src line 175)
+	.  reduce 30 (src line 192)
 
 
 state 73
@@ -899,7 +899,7 @@ state 73
 
 	@  shift 47
 	.  shift 48
-	.  reduce 31 (src line 177)
+	.  reduce 31 (src line 194)
 
 
 state 74
@@ -914,7 +914,7 @@ state 74
 
 	@  shift 47
 	.  shift 48
-	.  reduce 32 (src line 179)
+	.  reduce 32 (src line 196)
 
 
 state 75
@@ -934,7 +934,7 @@ state 75
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 34 (src line 183)
+	.  reduce 34 (src line 200)
 
 
 state 76
@@ -954,7 +954,7 @@ state 76
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 18 (src line 150)
+	.  reduce 18 (src line 167)
 
 
 state 77
@@ -969,7 +969,7 @@ state 78
 	exprs:  exprs., expr 
 
 	,  shift 93
-	.  reduce 42 (src line 202)
+	.  reduce 42 (src line 219)
 
 
 state 79
@@ -989,7 +989,7 @@ state 79
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 43 (src line 206)
+	.  reduce 43 (src line 223)
 
 
 state 80
@@ -1037,7 +1037,7 @@ state 81
 state 82
 	expr:  { exprlist }.    (24)
 
-	.  reduce 24 (src line 163)
+	.  reduce 24 (src line 180)
 
 
 state 83
@@ -1109,7 +1109,7 @@ state 87
 state 88
 	expr:  ( expr ).    (36)
 
-	.  reduce 36 (src line 187)
+	.  reduce 36 (src line 204)
 
 
 state 89
@@ -1158,7 +1158,7 @@ state 91
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 199)
+	.  reduce 41 (src line 216)
 
 	expr  goto 79
 	exprs  goto 78
@@ -1167,7 +1167,7 @@ state 91
 state 92
 	expr:  OBJECTID ( maybeexprs ).    (21)
 
-	.  reduce 21 (src line 157)
+	.  reduce 21 (src line 174)
 
 
 state 93
@@ -1236,7 +1236,7 @@ state 95
 state 96
 	exprlist:  exprlist expr ;.    (46)
 
-	.  reduce 46 (src line 216)
+	.  reduce 46 (src line 233)
 
 
 state 97
@@ -1256,13 +1256,13 @@ state 97
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 25 (src line 165)
+	.  reduce 25 (src line 182)
 
 
 state 98
 	bindings:  bindings , binding.    (48)
 
-	.  reduce 48 (src line 223)
+	.  reduce 48 (src line 240)
 
 
 state 99
@@ -1270,7 +1270,7 @@ state 99
 	maybeassign: .    (11)
 
 	ASSIGN  shift 25
-	.  reduce 11 (src line 124)
+	.  reduce 11 (src line 131)
 
 	maybeassign  goto 109
 
@@ -1287,7 +1287,7 @@ state 100
 state 101
 	branches:  branch.    (50)
 
-	.  reduce 50 (src line 232)
+	.  reduce 50 (src line 249)
 
 
 state 102
@@ -1335,7 +1335,7 @@ state 106
 	/  shift 52
 	@  shift 47
 	.  shift 48
-	.  reduce 44 (src line 209)
+	.  reduce 44 (src line 226)
 
 
 state 107
@@ -1362,25 +1362,25 @@ state 107
 state 108
 	expr:  WHILE expr LOOP expr POOL.    (23)
 
-	.  reduce 23 (src line 161)
+	.  reduce 23 (src line 178)
 
 
 state 109
 	binding:  OBJECTID : TYPEID maybeassign.    (49)
 
-	.  reduce 49 (src line 227)
+	.  reduce 49 (src line 244)
 
 
 state 110
 	expr:  CASE expr OF branches ESAC.    (26)
 
-	.  reduce 26 (src line 167)
+	.  reduce 26 (src line 184)
 
 
 state 111
 	branches:  branches branch.    (51)
 
-	.  reduce 51 (src line 235)
+	.  reduce 51 (src line 252)
 
 
 state 112
@@ -1393,7 +1393,7 @@ state 112
 state 113
 	feature:  OBJECTID ( formals ) : TYPEID { expr } ;.    (9)
 
-	.  reduce 9 (src line 117)
+	.  reduce 9 (src line 124)
 
 
 state 114
@@ -1414,7 +1414,7 @@ state 114
 	~  shift 39
 	{  shift 34
 	(  shift 41
-	.  reduce 41 (src line 199)
+	.  reduce 41 (src line 216)
 
 	expr  goto 79
 	exprs  goto 78
@@ -1423,7 +1423,7 @@ state 114
 state 115
 	expr:  expr . OBJECTID ( maybeexprs ).    (20)
 
-	.  reduce 20 (src line 155)
+	.  reduce 20 (src line 172)
 
 
 state 116
@@ -1464,7 +1464,7 @@ state 118
 state 119
 	expr:  IF expr THEN expr ELSE expr FI.    (22)
 
-	.  reduce 22 (src line 159)
+	.  reduce 22 (src line 176)
 
 
 state 120
@@ -1491,7 +1491,7 @@ state 120
 state 121
 	expr:  expr @ TYPEID . OBJECTID ( maybeexprs ).    (19)
 
-	.  reduce 19 (src line 153)
+	.  reduce 19 (src line 170)
 
 
 state 122
@@ -1518,7 +1518,7 @@ state 122
 state 123
 	branch:  OBJECTID : TYPEID DARROW expr ;.    (52)
 
-	.  reduce 52 (src line 239)
+	.  reduce 52 (src line 256)
 
 
 44 terminals, 19 nonterminals

@@ -406,6 +406,6 @@ func (l *lexer) Error(e string) {
 
 func (l *lexer) Lex(lval *yySymType) int {
 	i := l.nextItem()
-	*lval = yySymType{str: i.val}
+	*lval = yySymType{str: i.val, line: l.lineNumber()}
 	return i.typ
 }

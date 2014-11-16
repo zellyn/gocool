@@ -8,6 +8,7 @@ import __yyfmt__ "fmt"
 type yySymType struct {
 	yys      int
 	str      string
+	line     int
 	expr     *Expr
 	exprs    []*Expr
 	program  *Program
@@ -457,265 +458,273 @@ yydefault:
 	switch yynt {
 
 	case 1:
-		//line cool.y:85
+		//line cool.y:86
 		{
-			yylex.(*lexer).prog = &Program{Classes: yyS[yypt-0].classes}
+			yylex.(*lexer).prog = &Program{Classes: yyS[yypt-0].classes, Base: Base{Line: yyS[yypt-0].line}}
 			return 0
 		}
 	case 2:
-		//line cool.y:93
+		//line cool.y:94
 		{
 			yyVAL.classes = nil
 		}
 	case 3:
-		//line cool.y:95
+		//line cool.y:96
 		{
 			yyVAL.classes = append(yyS[yypt-1].classes, yyS[yypt-0].class)
+			yyVAL.line = yyS[yypt-0].class.Line
 		}
 	case 4:
-		//line cool.y:100
+		//line cool.y:104
 		{
-			yyVAL.class = &Class{Name: yyS[yypt-5].str, Parent: yyS[yypt-4].str, Features: yyS[yypt-2].features, Filename: "dummy"}
+			yyVAL.class = &Class{Name: yyS[yypt-5].str, Parent: yyS[yypt-4].str, Features: yyS[yypt-2].features, Filename: yylex.(*lexer).name, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 5:
-		//line cool.y:105
+		//line cool.y:109
 		{
 			yyVAL.str = "Object"
 		}
 	case 6:
-		//line cool.y:107
+		//line cool.y:111
 		{
 			yyVAL.str = yyS[yypt-0].str
 		}
 	case 7:
-		//line cool.y:112
+		//line cool.y:116
 		{
 			yyVAL.features = nil
 		}
 	case 8:
-		//line cool.y:114
+		//line cool.y:118
 		{
 			yyVAL.features = append(yyS[yypt-1].features, yyS[yypt-0].feature)
+			yyVAL.line = yyS[yypt-0].feature.Line
 		}
 	case 9:
-		//line cool.y:119
-		{
-			yyVAL.feature = &Feature{Method: &Method{Name: yyS[yypt-9].str, Formals: yyS[yypt-7].formals, Type: yyS[yypt-4].str, Expr: yyS[yypt-2].expr}}
-		}
-	case 10:
-		//line cool.y:121
-		{
-			yyVAL.feature = &Feature{Attr: &Attr{Name: yyS[yypt-4].str, Type: yyS[yypt-2].str, Init: yyS[yypt-1].expr}}
-		}
-	case 11:
 		//line cool.y:126
 		{
-			yyVAL.expr = &Expr{Op: Placeholder}
+			yyVAL.feature = &Feature{Method: &Method{Name: yyS[yypt-9].str, Formals: yyS[yypt-7].formals, Type: yyS[yypt-4].str, Expr: yyS[yypt-2].expr, Base: Base{Line: yyS[yypt-0].line}}}
 		}
-	case 12:
+	case 10:
 		//line cool.y:128
 		{
-			yyVAL.expr = &Expr{Op: Placeholder, Left: yyS[yypt-0].expr}
+			yyVAL.feature = &Feature{Attr: &Attr{Name: yyS[yypt-4].str, Type: yyS[yypt-2].str, Init: yyS[yypt-1].expr.Left, Base: Base{Line: yyS[yypt-0].line}}}
 		}
-	case 13:
+	case 11:
 		//line cool.y:133
 		{
-			yyVAL.formals = nil
+			yyVAL.expr = &Expr{Op: Placeholder, Left: &Expr{Op: NoExpr, Base: Base{Line: yyS[yypt-0].line}}}
 		}
-	case 14:
+	case 12:
 		//line cool.y:135
 		{
-			yyVAL.formals = append([]*Formal{yyS[yypt-1].formal}, yyS[yypt-0].formals...)
+			yyVAL.expr = &Expr{Op: Placeholder, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
-	case 15:
+	case 13:
 		//line cool.y:140
 		{
 			yyVAL.formals = nil
 		}
-	case 16:
+	case 14:
 		//line cool.y:142
 		{
-			yyVAL.formals = append(yyS[yypt-2].formals, yyS[yypt-0].formal)
+			yyVAL.formals = append([]*Formal{yyS[yypt-1].formal}, yyS[yypt-0].formals...)
+			if yyS[yypt-0].formals != nil {
+				yyVAL.line = yyS[yypt-0].formals[len(yyS[yypt-0].formals)-1].Line
+			} else {
+				yyVAL.line = yyS[yypt-1].line
+			}
 		}
-	case 17:
-		//line cool.y:147
-		{
-			yyVAL.formal = &Formal{Name: yyS[yypt-2].str, Type: yyS[yypt-0].str}
-		}
-	case 18:
-		//line cool.y:152
-		{
-			yyVAL.expr = &Expr{Op: Assign, Text: yyS[yypt-2].str, Left: yyS[yypt-0].expr}
-		}
-	case 19:
+	case 15:
 		//line cool.y:154
 		{
-			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, Type: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs}
+			yyVAL.formals = nil
 		}
-	case 20:
+	case 16:
 		//line cool.y:156
 		{
-			yyVAL.expr = &Expr{Op: Dispatch, Left: yyS[yypt-5].expr, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs}
+			yyVAL.formals = append(yyS[yypt-2].formals, yyS[yypt-0].formal)
+			yyVAL.line = yyS[yypt-0].formal.Line
 		}
-	case 21:
-		//line cool.y:158
-		{
-			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self"}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs}
-		}
-	case 22:
-		//line cool.y:160
-		{
-			yyVAL.expr = &Expr{Op: If, Left: yyS[yypt-5].expr, Right: yyS[yypt-3].expr, Else: yyS[yypt-1].expr}
-		}
-	case 23:
-		//line cool.y:162
-		{
-			yyVAL.expr = &Expr{Op: While, Left: yyS[yypt-3].expr, Right: yyS[yypt-1].expr}
-		}
-	case 24:
+	case 17:
 		//line cool.y:164
 		{
-			yyVAL.expr = &Expr{Op: Block, Exprs: yyS[yypt-1].exprs}
+			yyVAL.formal = &Formal{Name: yyS[yypt-2].str, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 18:
+		//line cool.y:169
+		{
+			yyVAL.expr = &Expr{Op: Assign, Text: yyS[yypt-2].str, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 19:
+		//line cool.y:171
+		{
+			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, Type: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 20:
+		//line cool.y:173
+		{
+			yyVAL.expr = &Expr{Op: Dispatch, Left: yyS[yypt-5].expr, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 21:
+		//line cool.y:175
+		{
+			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self"}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 22:
+		//line cool.y:177
+		{
+			yyVAL.expr = &Expr{Op: If, Left: yyS[yypt-5].expr, Right: yyS[yypt-3].expr, Else: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 23:
+		//line cool.y:179
+		{
+			yyVAL.expr = &Expr{Op: Loop, Left: yyS[yypt-3].expr, Right: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 24:
+		//line cool.y:181
+		{
+			yyVAL.expr = &Expr{Op: Block, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 25:
-		//line cool.y:166
+		//line cool.y:183
 		{
 			yyVAL.expr = MakeLet(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 26:
-		//line cool.y:168
+		//line cool.y:185
 		{
-			yyVAL.expr = &Expr{Op: TypCase, Left: yyS[yypt-3].expr, Exprs: yyS[yypt-1].exprs}
+			yyVAL.expr = &Expr{Op: TypCase, Left: yyS[yypt-3].expr, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 27:
-		//line cool.y:170
+		//line cool.y:187
 		{
-			yyVAL.expr = &Expr{Op: New, Text: yyS[yypt-0].str}
+			yyVAL.expr = &Expr{Op: New, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 28:
-		//line cool.y:172
+		//line cool.y:189
 		{
-			yyVAL.expr = &Expr{Op: Isvoid, Left: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Isvoid, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 29:
-		//line cool.y:174
+		//line cool.y:191
 		{
-			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 30:
-		//line cool.y:176
+		//line cool.y:193
 		{
-			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 31:
-		//line cool.y:178
+		//line cool.y:195
 		{
-			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 32:
-		//line cool.y:180
+		//line cool.y:197
 		{
-			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 33:
-		//line cool.y:182
+		//line cool.y:199
 		{
-			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 34:
-		//line cool.y:184
+		//line cool.y:201
 		{
-			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 35:
-		//line cool.y:186
+		//line cool.y:203
 		{
-			yyVAL.expr = &Expr{Op: Comp, Text: yyS[yypt-1].str}
+			yyVAL.expr = &Expr{Op: Comp, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 36:
-		//line cool.y:188
+		//line cool.y:205
 		{
 			yyVAL.expr = yyS[yypt-1].expr
 		}
 	case 37:
-		//line cool.y:190
+		//line cool.y:207
 		{
-			yyVAL.expr = &Expr{Op: Object, Text: yyS[yypt-0].str}
+			yyVAL.expr = &Expr{Op: Object, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 38:
-		//line cool.y:192
+		//line cool.y:209
 		{
-			yyVAL.expr = &Expr{Op: IntConst, Text: yyS[yypt-0].str}
+			yyVAL.expr = &Expr{Op: IntConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 39:
-		//line cool.y:194
+		//line cool.y:211
 		{
-			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str}
+			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 40:
-		//line cool.y:196
+		//line cool.y:213
 		{
-			yyVAL.expr = &Expr{Op: BoolConst, Text: yyS[yypt-0].str}
+			yyVAL.expr = &Expr{Op: BoolConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 41:
-		//line cool.y:201
+		//line cool.y:218
 		{
 			yyVAL.exprs = nil
 		}
 	case 42:
-		//line cool.y:203
+		//line cool.y:220
 		{
 			yyVAL.exprs = yyS[yypt-0].exprs
 		}
 	case 43:
-		//line cool.y:208
+		//line cool.y:225
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 44:
-		//line cool.y:210
+		//line cool.y:227
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 45:
-		//line cool.y:215
+		//line cool.y:232
 		{
 			yyVAL.exprs = nil
 		}
 	case 46:
-		//line cool.y:217
+		//line cool.y:234
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-1].expr)
 		}
 	case 47:
-		//line cool.y:222
+		//line cool.y:239
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 48:
-		//line cool.y:224
+		//line cool.y:241
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 49:
-		//line cool.y:229
+		//line cool.y:246
 		{
-			yyVAL.expr = &Expr{Op: Placeholder, Text: yyS[yypt-3].str, Left: yyS[yypt-0].expr.Left}
+			yyVAL.expr = &Expr{Op: Placeholder, Text: yyS[yypt-3].str, Type: yyS[yypt-1].str, Left: yyS[yypt-0].expr.Left, Base: Base{Line: yyS[yypt-4].line}}
 		}
 	case 50:
-		//line cool.y:234
+		//line cool.y:251
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 51:
-		//line cool.y:236
+		//line cool.y:253
 		{
 			yyVAL.exprs = append(yyS[yypt-1].exprs, yyS[yypt-0].expr)
 		}
 	case 52:
-		//line cool.y:241
+		//line cool.y:258
 		{
-			yyVAL.expr = &Expr{Op: Branch, Text: yyS[yypt-5].str, Type: yyS[yypt-3].str, Left: yyS[yypt-1].expr}
+			yyVAL.expr = &Expr{Op: Branch, Text: yyS[yypt-5].str, Type: yyS[yypt-3].str, Left: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	}
 	goto yystack /* stack new state and value */
