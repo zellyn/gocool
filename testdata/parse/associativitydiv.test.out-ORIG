@@ -4,7 +4,7 @@ _program
   _class
     Hello
     Object
-    "associativity-.test"
+    "associativitydiv.test"
     (
     #2
     _attr
@@ -33,12 +33,12 @@ _program
         d
         Int
       Hello
-      #5
-      _sub
+      #6
+      _divide
         #5
-        _sub
+        _divide
           #5
-          _sub
+          _divide
             #5
             _object
               a
@@ -53,7 +53,7 @@ _program
             c
           : _no_type
         : _no_type
-        #5
+        #6
         _object
           d
         : _no_type

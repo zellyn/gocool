@@ -14,14 +14,14 @@ _program
         a
         Int
       Int
-      #5
+      #6
       _let
         a
         Int
         #4
         _no_expr
         : _no_type
-        #5
+        #6
         _plus
           #5
           _int

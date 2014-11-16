@@ -33,7 +33,7 @@ _program
         d
         Int
       Hello
-      #5
+      #6
       _sub
         #5
         _sub
@@ -53,7 +53,7 @@ _program
             c
           : _no_type
         : _no_type
-        #5
+        #6
         _object
           d
         : _no_type
