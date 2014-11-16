@@ -34,7 +34,7 @@ _program
         : _no_type
         #7
         _cond
-          #4
+          #5
           _eq
             #4
             _dispatch
@@ -161,7 +161,7 @@ _program
       Object
       #28
       _cond
-        #25
+        #26
         _eq
           #25
           _object

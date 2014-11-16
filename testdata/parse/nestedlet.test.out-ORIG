@@ -14,7 +14,7 @@ _program
         x
         Int
       Object
-      #7
+      #8
       _let
         x
         Int
@@ -22,42 +22,42 @@ _program
         _int
           3
         : _no_type
-        #7
+        #8
         _let
           y
           Bool
           #4
           _no_expr
           : _no_type
-          #7
+          #8
           _let
             z
             Object
             #4
             _no_expr
             : _no_type
-            #7
+            #8
             _let
               a
               Object
               #5
               _no_expr
               : _no_type
-              #7
+              #8
               _let
                 b
                 Object
                 #5
                 _no_expr
                 : _no_type
-                #7
+                #8
                 _let
                   c
                   Object
                   #5
                   _no_expr
                   : _no_type
-                  #7
+                  #8
                   _let
                     d
                     Int
@@ -65,7 +65,7 @@ _program
                     _int
                       6
                     : _no_type
-                    #7
+                    #8
                     _plus
                       #7
                       _object

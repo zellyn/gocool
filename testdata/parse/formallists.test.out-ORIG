@@ -22,7 +22,7 @@ _program
         x
         Bool
       IO
-      #6
+      #7
       _object
         self
       : _no_type
@@ -38,7 +38,7 @@ _program
         z
         Int
       SELF_TYPE
-      #9
+      #10
       _object
         x
       : _no_type
@@ -58,7 +58,7 @@ _program
         c
         Object
       Object
-      #12
+      #13
       _plus
         #12
         _plus
@@ -71,7 +71,7 @@ _program
             b
           : _no_type
         : _no_type
-        #12
+        #13
         _object
           c
         : _no_type
