@@ -14,17 +14,15 @@ echo "---- GOOD INPUT ----"
 for i in $GOOD_FILES
 do
     echo "### $i"
-    echo ./printparse testdata/parse/$i.test '>' $OUTDIR/$i.test.out
-    ./printparse testdata/parse/$i.test > $OUTDIR/$i.test.out
+    ./printparse testdata/parse/$i.test > $OUTDIR/$i.test.out || true
     cmp -s testdata/parse/$i.test.out $OUTDIR/$i.test.out || diff -u testdata/parse/$i.test.out $OUTDIR/$i.test.out
 done
 echo "---- BAD INPUT ----"
 for i in $BAD_FILES
 do
     echo "### $i"
-    echo ./printparse testdata/parse/$i.test '>' $OUTDIR/$i.test.out
-    ./printparse testdata/parse/$i.test > $OUTDIR/$i.test.out
-    # diff testdata/parse/$i.test.out $OUTDIR/$i.test.out
+    ./printparse testdata/parse/$i.test > $OUTDIR/$i.test.out || true
+    cmp -s testdata/parse/$i.test.out $OUTDIR/$i.test.out || diff -u testdata/parse/$i.test.out $OUTDIR/$i.test.out
 done
 
 echo 'SUCCESS!'

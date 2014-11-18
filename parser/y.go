@@ -95,116 +95,138 @@ var yyExca = []int{
 	-1, 1,
 	1, -1,
 	-2, 0,
-	-1, 75,
+	-1, 2,
+	1, 1,
+	-2, 0,
+	-1, 11,
+	24, 8,
+	39, 8,
+	-2, 0,
+	-1, 87,
 	8, 0,
-	-2, 34,
+	-2, 38,
 }
 
-const yyNprod = 53
+const yyNprod = 59
 const yyPrivate = 57344
 
 var yyTokenNames []string
 var yyStates []string
 
-const yyLast = 237
+const yyLast = 321
 
 var yyAct = []int{
 
-	79, 77, 101, 60, 24, 93, 27, 84, 15, 112,
-	16, 86, 26, 44, 36, 23, 121, 115, 92, 54,
-	21, 114, 32, 91, 113, 38, 30, 35, 29, 37,
-	40, 42, 31, 56, 57, 43, 85, 62, 33, 64,
-	65, 66, 67, 39, 14, 68, 34, 82, 53, 41,
-	71, 72, 73, 74, 75, 76, 55, 47, 48, 83,
-	49, 50, 51, 52, 8, 47, 48, 90, 117, 89,
-	99, 49, 50, 51, 52, 13, 47, 48, 69, 18,
-	123, 94, 95, 51, 52, 97, 47, 48, 63, 98,
-	11, 45, 28, 105, 106, 20, 9, 5, 104, 110,
-	102, 44, 36, 111, 109, 61, 70, 46, 116, 19,
-	32, 102, 120, 38, 7, 35, 118, 37, 40, 42,
-	31, 122, 53, 43, 4, 22, 33, 25, 17, 53,
-	12, 39, 10, 6, 34, 3, 2, 41, 1, 53,
-	100, 58, 78, 59, 0, 49, 50, 51, 52, 0,
-	47, 48, 49, 50, 51, 52, 88, 47, 48, 53,
-	0, 96, 49, 50, 51, 52, 53, 47, 48, 0,
-	103, 119, 0, 53, 0, 107, 0, 108, 0, 0,
-	0, 0, 49, 50, 51, 52, 53, 47, 48, 49,
-	50, 51, 52, 53, 47, 48, 49, 50, 51, 52,
-	53, 47, 48, 87, 0, 81, 0, 53, 0, 49,
-	50, 51, 52, 0, 47, 48, 49, 50, 51, 52,
-	80, 47, 48, 49, 50, 51, 52, 0, 47, 48,
-	49, 50, 51, 52, 0, 47, 48,
+	91, 89, 117, 70, 30, 61, 98, 109, 34, 20,
+	130, 21, 100, 53, 32, 29, 140, 134, 108, 33,
+	57, 58, 59, 60, 27, 55, 56, 133, 57, 58,
+	59, 60, 37, 55, 56, 99, 107, 105, 131, 102,
+	64, 65, 67, 97, 73, 62, 75, 76, 77, 78,
+	36, 59, 60, 104, 55, 56, 51, 43, 83, 84,
+	85, 86, 87, 88, 26, 39, 19, 95, 45, 18,
+	42, 8, 44, 47, 49, 38, 17, 120, 50, 106,
+	103, 40, 63, 55, 56, 136, 46, 79, 61, 41,
+	125, 15, 48, 110, 111, 11, 23, 115, 81, 113,
+	80, 74, 52, 114, 35, 25, 121, 12, 7, 123,
+	124, 57, 58, 59, 60, 71, 55, 56, 128, 129,
+	127, 122, 118, 72, 82, 24, 135, 51, 43, 139,
+	118, 54, 10, 5, 31, 137, 39, 72, 4, 45,
+	141, 42, 14, 44, 47, 49, 38, 68, 28, 50,
+	51, 43, 40, 3, 22, 16, 6, 46, 13, 39,
+	41, 94, 45, 48, 42, 9, 44, 47, 49, 38,
+	2, 1, 50, 51, 43, 40, 116, 66, 90, 69,
+	46, 0, 39, 41, 0, 45, 48, 42, 61, 44,
+	47, 49, 38, 0, 0, 50, 0, 0, 40, 61,
+	0, 0, 0, 46, 0, 0, 41, 0, 0, 48,
+	61, 57, 58, 59, 60, 0, 55, 56, 0, 0,
+	142, 61, 57, 58, 59, 60, 0, 55, 56, 0,
+	61, 112, 0, 57, 58, 59, 60, 0, 55, 56,
+	0, 0, 96, 61, 57, 58, 59, 60, 138, 55,
+	56, 0, 132, 57, 58, 59, 60, 61, 55, 56,
+	0, 119, 0, 0, 0, 0, 57, 58, 59, 60,
+	61, 55, 56, 0, 0, 126, 0, 61, 0, 0,
+	57, 58, 59, 60, 61, 55, 56, 101, 0, 93,
+	0, 61, 0, 57, 58, 59, 60, 0, 55, 56,
+	57, 58, 59, 60, 92, 55, 56, 57, 58, 59,
+	60, 0, 55, 56, 57, 58, 59, 60, 0, 55,
+	56,
 }
 var yyPact = []int{
 
-	-1000, -1000, 117, -1000, 68, 98, 26, 67, -1000, -1000,
-	51, 4, -1000, -33, -1000, 85, 66, -22, -1000, -28,
-	123, -31, -38, 63, -12, 96, 62, 85, -1000, -1000,
-	199, 15, 96, 96, -1000, 81, 96, 59, 96, 96,
-	96, 96, -1000, -1000, -1000, 7, -1000, 49, 82, 96,
-	96, 96, 96, 96, 96, 96, 192, 185, 8, -8,
-	-1000, -32, 178, -1000, 21, 21, 199, 114, 96, 30,
-	-18, 50, 50, 21, 21, 29, 199, -24, -39, 199,
-	96, 96, -1000, 121, 96, 81, 41, 76, -1000, 131,
-	74, 96, -1000, 96, 165, 151, -1000, 199, -1000, 123,
-	87, -1000, -34, -16, -20, -25, 199, 96, -1000, -1000,
-	-1000, -1000, 39, -1000, 96, -1000, 158, 103, -26, -1000,
-	96, -1000, 40, -1000,
+	131, -1000, 131, -1000, 79, 31, -1000, 116, -1000, 57,
+	78, 140, -1000, 52, 29, 26, -1000, -32, -1000, -1000,
+	101, 76, 22, -1000, -28, 130, -29, -23, -36, 75,
+	10, 168, 73, -30, 101, -1000, -1000, 283, 41, 168,
+	168, 145, 113, 168, 72, 168, 168, 168, 168, -1000,
+	-1000, -1000, 49, 71, -1000, 69, 100, 168, 168, 168,
+	168, 168, 168, 168, 276, 269, 122, 202, 3, -9,
+	-1000, -1000, -31, 262, -1000, 47, 47, 283, -3, 51,
+	-1, 42, -5, 18, 18, 47, 47, -11, 283, -24,
+	-37, 283, 168, 168, -1000, 191, -1000, -1000, 168, 99,
+	68, 98, -1000, 222, 38, 168, 97, 168, -1000, 168,
+	80, 249, -1000, 283, -1000, 130, 106, -1000, -33, -2,
+	-1000, 213, -14, -25, 283, 168, -1000, -1000, -1000, -1000,
+	56, -1000, -1000, 168, -1000, 235, 120, -26, -1000, 168,
+	-1000, 180, -1000,
 }
 var yyPgo = []int{
 
-	0, 0, 143, 3, 4, 142, 1, 141, 2, 140,
-	138, 136, 135, 133, 132, 130, 128, 125, 79,
+	0, 0, 179, 3, 4, 178, 1, 177, 2, 176,
+	171, 170, 153, 165, 158, 155, 154, 148, 96,
 }
 var yyR1 = []int{
 
-	0, 10, 11, 11, 12, 13, 13, 14, 14, 15,
-	15, 4, 4, 16, 16, 17, 17, 18, 1, 1,
+	0, 10, 11, 11, 12, 12, 13, 13, 14, 14,
+	14, 15, 15, 15, 15, 4, 4, 16, 16, 17,
+	17, 18, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-	1, 6, 6, 5, 5, 7, 7, 2, 2, 3,
-	9, 9, 8,
+	1, 1, 1, 1, 1, 6, 6, 5, 5, 7,
+	7, 7, 2, 2, 2, 3, 9, 9, 8,
 }
 var yyR2 = []int{
 
-	0, 1, 0, 2, 7, 0, 2, 0, 2, 10,
-	5, 0, 2, 0, 2, 0, 3, 3, 3, 8,
-	6, 4, 7, 5, 3, 4, 5, 2, 2, 3,
-	3, 3, 3, 2, 3, 2, 3, 1, 1, 1,
-	1, 0, 1, 1, 3, 0, 3, 1, 3, 4,
-	1, 2, 6,
+	0, 1, 1, 2, 7, 2, 0, 2, 0, 2,
+	2, 10, 5, 9, 10, 0, 2, 0, 2, 0,
+	3, 3, 3, 8, 6, 4, 7, 5, 3, 4,
+	5, 2, 2, 3, 3, 3, 3, 2, 3, 2,
+	3, 1, 1, 1, 1, 0, 1, 1, 3, 2,
+	3, 2, 1, 3, 1, 4, 1, 2, 6,
 }
 var yyChk = []int{
 
-	-1000, -10, -11, -12, 7, 29, -13, 16, 38, 29,
-	-14, 39, -15, 24, 40, 41, 43, -16, -18, 24,
-	29, 42, -17, 43, -4, 4, 43, 44, 29, 40,
-	-1, 24, 14, 30, 38, 19, 6, 21, 17, 35,
-	22, 41, 23, 27, 5, 29, -18, 36, 37, 31,
-	32, 33, 34, 8, 4, 41, -1, -1, -7, -2,
-	-3, 24, -1, 29, -1, -1, -1, -1, 38, 29,
-	24, -1, -1, -1, -1, -1, -1, -6, -5, -1,
-	28, 20, 39, -1, 15, 44, 43, 25, 42, -1,
-	37, 41, 42, 44, -1, -1, 40, -1, -3, 29,
-	-9, -8, 24, 39, 24, -6, -1, 10, 26, -4,
-	12, -8, 43, 40, 41, 42, -1, 29, -6, 13,
-	9, 42, -1, 40,
+	-1000, -10, -11, -12, 7, 2, -12, 29, 40, -13,
+	16, 38, 29, -14, 2, 39, -15, 24, 40, 40,
+	41, 43, -16, -18, 24, 29, 42, 2, -17, 43,
+	-4, 4, 43, 42, 44, 29, 40, -1, 24, 14,
+	30, 38, 19, 6, 21, 17, 35, 22, 41, 23,
+	27, 5, 29, 43, -18, 36, 37, 31, 32, 33,
+	34, 8, 4, 41, -1, -1, -7, -1, 2, -2,
+	-3, 2, 24, -1, 29, -1, -1, -1, -1, 38,
+	29, 29, 24, -1, -1, -1, -1, -1, -1, -6,
+	-5, -1, 28, 20, 39, -1, 40, 40, 15, 44,
+	43, 25, 42, -1, 2, 38, 37, 41, 42, 44,
+	-1, -1, 40, -1, -3, 29, -9, -8, 24, 39,
+	39, -1, 24, -6, -1, 10, 26, -4, 12, -8,
+	43, 40, 39, 41, 42, -1, 29, -6, 13, 9,
+	42, -1, 40,
 }
 var yyDef = []int{
 
-	2, -2, 1, 3, 0, 5, 0, 0, 7, 6,
-	0, 0, 8, 0, 4, 13, 0, 0, 15, 0,
-	11, 0, 14, 0, 0, 0, 0, 0, 17, 10,
-	12, 37, 0, 0, 45, 0, 0, 0, 0, 0,
-	0, 0, 38, 39, 40, 0, 16, 0, 0, 0,
-	0, 0, 0, 0, 0, 41, 0, 0, 0, 0,
-	47, 0, 0, 27, 28, 33, 35, 0, 0, 0,
-	0, 29, 30, 31, 32, -2, 18, 0, 42, 43,
-	0, 0, 24, 0, 0, 0, 0, 0, 36, 0,
-	0, 41, 21, 0, 0, 0, 46, 25, 48, 11,
-	0, 50, 0, 0, 0, 0, 44, 0, 23, 49,
-	26, 51, 0, 9, 41, 20, 0, 0, 0, 22,
-	0, 19, 0, 52,
+	0, -2, -2, 2, 0, 0, 3, 6, 5, 0,
+	0, -2, 7, 0, 0, 0, 9, 0, 10, 4,
+	17, 0, 0, 19, 0, 15, 0, 0, 18, 0,
+	0, 0, 0, 0, 0, 21, 12, 16, 41, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 42,
+	43, 44, 0, 0, 20, 0, 0, 0, 0, 0,
+	0, 0, 0, 45, 0, 0, 0, 0, 0, 0,
+	52, 54, 0, 0, 31, 32, 37, 39, 0, 0,
+	0, 0, 0, 33, 34, 35, 36, -2, 22, 0,
+	46, 47, 0, 0, 28, 0, 49, 51, 0, 0,
+	0, 0, 40, 0, 0, 0, 0, 45, 25, 0,
+	0, 0, 50, 29, 53, 15, 0, 56, 0, 0,
+	13, 0, 0, 0, 48, 0, 27, 55, 30, 57,
+	0, 11, 14, 45, 24, 0, 0, 0, 26, 0,
+	23, 0, 58,
 }
 var yyTok1 = []int{
 
@@ -466,67 +488,88 @@ yydefault:
 	case 2:
 		//line cool.y:94
 		{
-			yyVAL.classes = nil
+			yyVAL.classes = []*Class{yyS[yypt-0].class}
+			yyVAL.line = yyS[yypt-0].class.Line
 		}
 	case 3:
-		//line cool.y:96
+		//line cool.y:99
 		{
 			yyVAL.classes = append(yyS[yypt-1].classes, yyS[yypt-0].class)
 			yyVAL.line = yyS[yypt-0].class.Line
 		}
 	case 4:
-		//line cool.y:104
+		//line cool.y:107
 		{
 			yyVAL.class = &Class{Name: yyS[yypt-5].str, Parent: yyS[yypt-4].str, Features: yyS[yypt-2].features, Filename: yylex.(*lexer).name, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 5:
 		//line cool.y:109
 		{
-			yyVAL.str = "Object"
+			yyVAL.class = &Class{}
 		}
 	case 6:
-		//line cool.y:111
+		//line cool.y:114
 		{
-			yyVAL.str = yyS[yypt-0].str
+			yyVAL.str = "Object"
 		}
 	case 7:
 		//line cool.y:116
 		{
-			yyVAL.features = nil
+			yyVAL.str = yyS[yypt-0].str
 		}
 	case 8:
-		//line cool.y:118
+		//line cool.y:121
+		{
+			yyVAL.features = nil
+		}
+	case 9:
+		//line cool.y:123
 		{
 			yyVAL.features = append(yyS[yypt-1].features, yyS[yypt-0].feature)
 			yyVAL.line = yyS[yypt-0].feature.Line
 		}
-	case 9:
-		//line cool.y:126
-		{
-			yyVAL.feature = &Feature{Method: &Method{Name: yyS[yypt-9].str, Formals: yyS[yypt-7].formals, Type: yyS[yypt-4].str, Expr: yyS[yypt-2].expr, Base: Base{Line: yyS[yypt-0].line}}}
-		}
 	case 10:
 		//line cool.y:128
 		{
-			yyVAL.feature = &Feature{Attr: &Attr{Name: yyS[yypt-4].str, Type: yyS[yypt-2].str, Init: yyS[yypt-1].expr.Left, Base: Base{Line: yyS[yypt-0].line}}}
+			yyVAL.features = nil
 		}
 	case 11:
 		//line cool.y:133
 		{
-			yyVAL.expr = &Expr{Op: Placeholder, Left: &Expr{Op: NoExpr, Base: Base{Line: yyS[yypt-0].line}}}
+			yyVAL.feature = &Feature{Method: &Method{Name: yyS[yypt-9].str, Formals: yyS[yypt-7].formals, Type: yyS[yypt-4].str, Expr: yyS[yypt-2].expr, Base: Base{Line: yyS[yypt-0].line}}}
 		}
 	case 12:
 		//line cool.y:135
 		{
-			yyVAL.expr = &Expr{Op: Placeholder, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.feature = &Feature{Attr: &Attr{Name: yyS[yypt-4].str, Type: yyS[yypt-2].str, Init: yyS[yypt-1].expr.Left, Base: Base{Line: yyS[yypt-0].line}}}
 		}
 	case 13:
-		//line cool.y:140
+		//line cool.y:137
+		{
+			yyVAL.feature = &Feature{}
+		}
+	case 14:
+		//line cool.y:139
+		{
+			yyVAL.feature = &Feature{}
+		}
+	case 15:
+		//line cool.y:144
+		{
+			yyVAL.expr = &Expr{Op: Placeholder, Left: &Expr{Op: NoExpr, Base: Base{Line: yyS[yypt-0].line}}}
+		}
+	case 16:
+		//line cool.y:146
+		{
+			yyVAL.expr = &Expr{Op: Placeholder, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+		}
+	case 17:
+		//line cool.y:151
 		{
 			yyVAL.formals = nil
 		}
-	case 14:
-		//line cool.y:142
+	case 18:
+		//line cool.y:153
 		{
 			yyVAL.formals = append([]*Formal{yyS[yypt-1].formal}, yyS[yypt-0].formals...)
 			if yyS[yypt-0].formals != nil {
@@ -535,195 +578,205 @@ yydefault:
 				yyVAL.line = yyS[yypt-1].line
 			}
 		}
-	case 15:
-		//line cool.y:154
+	case 19:
+		//line cool.y:165
 		{
 			yyVAL.formals = nil
 		}
-	case 16:
-		//line cool.y:156
+	case 20:
+		//line cool.y:167
 		{
 			yyVAL.formals = append(yyS[yypt-2].formals, yyS[yypt-0].formal)
 			yyVAL.line = yyS[yypt-0].formal.Line
 		}
-	case 17:
-		//line cool.y:164
-		{
-			yyVAL.formal = &Formal{Name: yyS[yypt-2].str, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
-		}
-	case 18:
-		//line cool.y:169
-		{
-			yyVAL.expr = &Expr{Op: Assign, Text: yyS[yypt-2].str, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].line}}
-		}
-	case 19:
-		//line cool.y:171
-		{
-			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, Type: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
-		}
-	case 20:
-		//line cool.y:173
-		{
-			yyVAL.expr = &Expr{Op: Dispatch, Left: yyS[yypt-5].expr, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
-		}
 	case 21:
 		//line cool.y:175
 		{
-			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self", Base: Base{Line: yyS[yypt-3].line}}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.formal = &Formal{Name: yyS[yypt-2].str, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 22:
-		//line cool.y:177
+		//line cool.y:180
+		{
+			yyVAL.expr = &Expr{Op: Assign, Text: yyS[yypt-2].str, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 23:
+		//line cool.y:182
+		{
+			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, Type: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 24:
+		//line cool.y:184
+		{
+			yyVAL.expr = &Expr{Op: Dispatch, Left: yyS[yypt-5].expr, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 25:
+		//line cool.y:186
+		{
+			yyVAL.expr = &Expr{Op: Dispatch, Left: &Expr{Op: Object, Text: "self", Base: Base{Line: yyS[yypt-3].line}}, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+		}
+	case 26:
+		//line cool.y:188
 		{
 			yyVAL.expr = &Expr{Op: Cond, Left: yyS[yypt-5].expr, Right: yyS[yypt-3].expr, Else: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}
-	case 23:
-		//line cool.y:179
+	case 27:
+		//line cool.y:190
 		{
 			yyVAL.expr = &Expr{Op: Loop, Left: yyS[yypt-3].expr, Right: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}
-	case 24:
-		//line cool.y:181
+	case 28:
+		//line cool.y:192
 		{
 			yyVAL.expr = &Expr{Op: Block, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
-	case 25:
-		//line cool.y:183
+	case 29:
+		//line cool.y:194
 		{
 			yyVAL.expr = MakeLet(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
-	case 26:
-		//line cool.y:185
+	case 30:
+		//line cool.y:196
 		{
 			yyVAL.expr = &Expr{Op: TypCase, Left: yyS[yypt-3].expr, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
-	case 27:
-		//line cool.y:187
+	case 31:
+		//line cool.y:198
 		{
 			yyVAL.expr = &Expr{Op: New, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
-	case 28:
-		//line cool.y:189
+	case 32:
+		//line cool.y:200
 		{
 			yyVAL.expr = &Expr{Op: Isvoid, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
-	case 29:
-		//line cool.y:191
+	case 33:
+		//line cool.y:202
 		{
 			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
-	case 30:
-		//line cool.y:193
+	case 34:
+		//line cool.y:204
 		{
 			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
-	case 31:
-		//line cool.y:195
+	case 35:
+		//line cool.y:206
 		{
 			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
-	case 32:
-		//line cool.y:197
+	case 36:
+		//line cool.y:208
 		{
 			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
-		}
-	case 33:
-		//line cool.y:199
-		{
-			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
-		}
-	case 34:
-		//line cool.y:201
-		{
-			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
-		}
-	case 35:
-		//line cool.y:203
-		{
-			yyVAL.expr = &Expr{Op: Comp, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
-		}
-	case 36:
-		//line cool.y:205
-		{
-			yyVAL.expr = yyS[yypt-1].expr
-			yyVAL.expr.Line = yyS[yypt-0].line
 		}
 	case 37:
 		//line cool.y:210
 		{
-			yyVAL.expr = &Expr{Op: Object, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 38:
 		//line cool.y:212
 		{
-			yyVAL.expr = &Expr{Op: IntConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 39:
 		//line cool.y:214
 		{
-			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: Comp, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 40:
 		//line cool.y:216
 		{
-			yyVAL.expr = &Expr{Op: BoolConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = yyS[yypt-1].expr
+			yyVAL.expr.Line = yyS[yypt-0].line
 		}
 	case 41:
 		//line cool.y:221
 		{
-			yyVAL.exprs = nil
+			yyVAL.expr = &Expr{Op: Object, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 42:
 		//line cool.y:223
 		{
-			yyVAL.exprs = yyS[yypt-0].exprs
+			yyVAL.expr = &Expr{Op: IntConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 43:
-		//line cool.y:228
+		//line cool.y:225
 		{
-			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
+			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 44:
-		//line cool.y:230
+		//line cool.y:227
 		{
-			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
+			yyVAL.expr = &Expr{Op: BoolConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 45:
-		//line cool.y:235
+		//line cool.y:232
 		{
 			yyVAL.exprs = nil
 		}
 	case 46:
-		//line cool.y:237
+		//line cool.y:234
 		{
-			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-1].expr)
+			yyVAL.exprs = yyS[yypt-0].exprs
 		}
 	case 47:
-		//line cool.y:242
+		//line cool.y:239
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
 	case 48:
-		//line cool.y:244
+		//line cool.y:241
 		{
 			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
 		}
 	case 49:
-		//line cool.y:249
+		//line cool.y:246
 		{
-			yyVAL.expr = &Expr{Op: Placeholder, Text: yyS[yypt-3].str, Type: yyS[yypt-1].str, Left: yyS[yypt-0].expr.Left, Base: Base{Line: yyS[yypt-4].line}}
+			yyVAL.exprs = []*Expr{yyS[yypt-1].expr}
 		}
 	case 50:
-		//line cool.y:254
+		//line cool.y:248
+		{
+			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-1].expr)
+		}
+	case 51:
+		//line cool.y:250
+		{
+			yyVAL.exprs = nil
+		}
+	case 52:
+		//line cool.y:255
 		{
 			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
 		}
-	case 51:
-		//line cool.y:256
+	case 53:
+		//line cool.y:257
+		{
+			yyVAL.exprs = append(yyS[yypt-2].exprs, yyS[yypt-0].expr)
+		}
+	case 54:
+		//line cool.y:259
+		{
+			yyVAL.exprs = nil
+		}
+	case 55:
+		//line cool.y:264
+		{
+			yyVAL.expr = &Expr{Op: Placeholder, Text: yyS[yypt-3].str, Type: yyS[yypt-1].str, Left: yyS[yypt-0].expr.Left, Base: Base{Line: yyS[yypt-4].line}}
+		}
+	case 56:
+		//line cool.y:269
+		{
+			yyVAL.exprs = []*Expr{yyS[yypt-0].expr}
+		}
+	case 57:
+		//line cool.y:271
 		{
 			yyVAL.exprs = append(yyS[yypt-1].exprs, yyS[yypt-0].expr)
 		}
-	case 52:
-		//line cool.y:261
+	case 58:
+		//line cool.y:276
 		{
 			yyVAL.expr = &Expr{Op: Branch, Text: yyS[yypt-5].str, Type: yyS[yypt-3].str, Left: yyS[yypt-1].expr, Base: Base{Line: yyS[yypt-0].line}}
 		}

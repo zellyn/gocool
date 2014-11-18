@@ -22,6 +22,7 @@ func main() {
 
 	prog, err := parser.Parse(filename, string(contents))
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	fmt.Print(prog.Dump())

@@ -62,6 +62,8 @@ type lexer struct {
 	items      chan item // channel of scanned items
 	parenDepth int       // nesting depth of ( ) exprs
 	prog       *Program  // The parsed program
+	lastItem   item      // The last item emitted
+	parseError bool      // True if an error occurred in parsing
 }
 
 // next returns the next rune in the input.
@@ -139,6 +141,7 @@ func (l *lexer) errorf(format string, args ...interface{}) stateFn {
 func (l *lexer) nextItem() item {
 	item := <-l.items
 	l.lastPos = item.pos + Pos(len(item.val))
+	l.lastItem = item
 	return item
 }
 
@@ -401,7 +404,8 @@ func isAlphaNumeric(r rune) bool {
 }
 
 func (l *lexer) Error(e string) {
-	fmt.Println(e)
+	l.parseError = true
+	fmt.Printf("%q, line %d: %s at or near %s\n", l.name, l.lineNumber(), e, printErrorItem(l.lastItem))
 }
 
 func (l *lexer) Lex(lval *yySymType) int {

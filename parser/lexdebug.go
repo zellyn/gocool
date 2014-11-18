@@ -19,10 +19,12 @@ func printItem(i item) string {
 	if s := reprs[i.typ]; s != "" {
 		return s
 	}
-	if strings.ContainsRune(singleChars, rune(i.typ)) {
+	if strings.ContainsRune(singleChars+operators, rune(i.typ)) {
 		return fmt.Sprintf("'%c'", i.typ)
 	}
 	switch i.typ {
+	case eof:
+		return "EOF"
 	case ERR:
 		return fmt.Sprintf("ERROR \"%s\"", printableString(i.err))
 	case BOOL:
@@ -37,6 +39,42 @@ func printItem(i item) string {
 		return fmt.Sprintf("STR_CONST \"%s\"", printableString(unescapeString(i.val)))
 	case NUM:
 		return fmt.Sprintf("INT_CONST %s", i.val)
+	case DARROW:
+		return "DARROW"
+	case CMP:
+		if i.val == "<=" {
+			return "LE"
+		}
+		return fmt.Sprintf("'%s'", i.val)
+	default:
+		return fmt.Sprintf("%+v", i)
+	}
+}
+
+func printErrorItem(i item) string {
+	if s := reprs[i.typ]; s != "" {
+		return s
+	}
+	if strings.ContainsRune(singleChars+operators, rune(i.typ)) {
+		return fmt.Sprintf("'%c'", i.typ)
+	}
+	switch i.typ {
+	case eof:
+		return "EOF"
+	case ERR:
+		return fmt.Sprintf("ERROR \"%s\"", printableString(i.err))
+	case BOOL:
+		return fmt.Sprintf("BOOL_CONST %s", strings.ToLower(i.val))
+	case TYPEID:
+		return fmt.Sprintf("TYPEID = %s", i.val)
+	case OBJECTID:
+		return fmt.Sprintf("OBJECTID = %s", i.val)
+	case ASSIGN:
+		return "ASSIGN"
+	case STRING:
+		return fmt.Sprintf("STR_CONST \"%s\"", printableString(unescapeString(i.val)))
+	case NUM:
+		return fmt.Sprintf("INT_CONST = %s", i.val)
 	case DARROW:
 		return "DARROW"
 	case CMP:

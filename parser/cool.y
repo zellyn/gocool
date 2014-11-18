@@ -90,8 +90,11 @@ prog:
 		;
 
 classes:
-		/* */
-		{ $$ = nil }
+		class
+		{
+		    $$ = []*Class{$1}
+		    $<line>$ = $1.Line
+		}
 	|       classes class
 		{
 		    $$ = append($1, $2)
@@ -102,6 +105,8 @@ classes:
 class:
 		CLASS TYPEID inherits '{' features '}' ';'
 		{ $$ = &Class{Name: $2, Parent: $3, Features: $5, Filename: yylex.(*lexer).name, Base:Base{Line:$<line>7}} }
+	|	error ';'
+		{ $$ = &Class{} }
 		;
 
 inherits:
@@ -119,6 +124,8 @@ features:
 		    $$ = append($1, $2)
 		    $<line>$ = $2.Line
 		}
+	|	error ';'
+		{ $$ = nil }
 		;
 
 feature:
@@ -126,6 +133,10 @@ feature:
 		{ $$ = &Feature{Method: &Method{Name: $1, Formals: $3, Type: $6, Expr: $8, Base:Base{Line:$<line>10}}} }
 	|       OBJECTID ':' TYPEID maybeassign ';'
 		{ $$ = &Feature{Attr: &Attr{Name: $1, Type: $3, Init: $4.Left, Base:Base{Line:$<line>5}}} }
+	|	OBJECTID '(' formals ')' ':' TYPEID '{' error '}'
+		{ $$ = &Feature{} }
+	|	OBJECTID '(' formals error ')' ':' TYPEID '{' expr '}'
+		{ $$ = &Feature{} }
 		;
 
 maybeassign:
@@ -231,10 +242,12 @@ exprs:
 		;
 
 exprlist:
-		/* */
-		{ $$ = nil }
+		expr ';'
+		{ $$ = []*Expr{$1} }
 	|       exprlist expr ';'
 		{ $$ = append($1, $2) }
+	|	error ';'
+                { $$ = nil }
 		;
 
 bindings:
@@ -242,6 +255,8 @@ bindings:
 		{ $$ = []*Expr{$1} }
 	|       bindings ',' binding
 		{ $$ = append($1, $3) }
+	|	error
+		{ $$ = nil }
 		;
 
 binding:
