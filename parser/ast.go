@@ -53,13 +53,14 @@ type Formal struct {
 
 type Expr struct {
 	Base
-	Text  string
-	Type  string // Type for static dispatch
-	Op    ExprOp
-	Left  *Expr
-	Right *Expr
-	Else  *Expr
-	Exprs []*Expr
+	Text         string
+	Type         string // Final Type of Expr
+	InternalType string // Type for static dispatch or let
+	Op           ExprOp
+	Left         *Expr
+	Right        *Expr
+	Else         *Expr
+	Exprs        []*Expr
 }
 
 type ExprOp int
@@ -146,22 +147,22 @@ func (op ExprOp) String() string {
 func MakeLet(bindings []*Expr, body *Expr) *Expr {
 	if len(bindings) == 1 {
 		return &Expr{
-			Op:    Let,
-			Text:  bindings[0].Text,
-			Type:  bindings[0].Type,
-			Left:  bindings[0].Left,
-			Right: body,
-			Base:  Base{Line: body.Line},
+			Op:           Let,
+			Text:         bindings[0].Text,
+			InternalType: bindings[0].Type,
+			Left:         bindings[0].Left,
+			Right:        body,
+			Base:         Base{Line: body.Line},
 		}
 	}
 	Right := MakeLet(bindings[1:], body)
 	return &Expr{
-		Op:    Let,
-		Text:  bindings[0].Text,
-		Type:  bindings[0].Type,
-		Left:  bindings[0].Left,
-		Right: Right,
-		Base:  Base{Right.Line},
+		Op:           Let,
+		Text:         bindings[0].Text,
+		InternalType: bindings[0].Type,
+		Left:         bindings[0].Left,
+		Right:        Right,
+		Base:         Base{Right.Line},
 	}
 }
 
@@ -293,7 +294,7 @@ func (e *Expr) dump(d *dumper) {
 	case StaticDispatch:
 		d.in()
 		e.Left.dump(d)
-		d.println(e.Type)
+		d.println(e.InternalType)
 		d.println(e.Text)
 		d.println("(")
 		for _, e2 := range e.Exprs {
@@ -322,12 +323,12 @@ func (e *Expr) dump(d *dumper) {
 		d.out()
 	case New:
 		d.in()
-		d.println(e.Type)
+		d.println(e.InternalType)
 		d.out()
 	case Let:
 		d.in()
 		d.println(e.Text)
-		d.println(e.Type)
+		d.println(e.InternalType)
 		e.Left.dump(d)
 		e.Right.dump(d)
 		d.out()
@@ -351,7 +352,7 @@ func (e *Expr) dump(d *dumper) {
 		e.Left.dump(d)
 		d.out()
 	}
-	if e.Type == "" || e.Op == StaticDispatch || e.Op == Let || e.Op == New {
+	if e.Type == "" {
 		d.println(": _no_type")
 	} else if e.Op != Branch {
 		d.printf(": %s\n", e.Type)

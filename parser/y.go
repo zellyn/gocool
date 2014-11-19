@@ -602,7 +602,7 @@ yydefault:
 	case 23:
 		//line cool.y:182
 		{
-			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, Type: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: StaticDispatch, Left: yyS[yypt-7].expr, InternalType: yyS[yypt-5].str, Text: yyS[yypt-3].str, Exprs: yyS[yypt-1].exprs, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 24:
 		//line cool.y:184
@@ -642,7 +642,7 @@ yydefault:
 	case 31:
 		//line cool.y:198
 		{
-			yyVAL.expr = &Expr{Op: New, Type: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: New, InternalType: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 32:
 		//line cool.y:200

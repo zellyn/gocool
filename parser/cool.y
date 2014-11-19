@@ -179,7 +179,7 @@ expr:
 		OBJECTID ASSIGN expr
 		{ $$ = &Expr{Op: Assign, Text: $1, Left: $3, Base:Base{Line:$<line>3}} }
 	|       expr '@' TYPEID '.' OBJECTID '(' maybeexprs ')'
-		{ $$ = &Expr{Op: StaticDispatch, Left: $1, Type: $3, Text: $5, Exprs: $7, Base:Base{Line:$<line>8}} }
+		{ $$ = &Expr{Op: StaticDispatch, Left: $1, InternalType: $3, Text: $5, Exprs: $7, Base:Base{Line:$<line>8}} }
 	|       expr '.' OBJECTID '(' maybeexprs ')'
 		{ $$ = &Expr{Op: Dispatch, Left: $1, Text: $3, Exprs: $5, Base:Base{Line:$<line>6}} }
 	|       OBJECTID '(' maybeexprs ')'
@@ -195,7 +195,7 @@ expr:
 	|       CASE expr OF branches ESAC
 		{ $$ = &Expr{Op: TypCase, Left: $2, Exprs: $4, Base:Base{Line:$<line>5}} }
 	|       NEW TYPEID
-		{ $$ = &Expr{Op: New, Type: $2, Base:Base{Line:$<line>2}} }
+		{ $$ = &Expr{Op: New, InternalType: $2, Base:Base{Line:$<line>2}} }
 	|       ISVOID expr
 		{ $$ = &Expr{Op: Isvoid, Left: $2, Base:Base{Line:$2.Line}} }
 	|       expr '+' expr
