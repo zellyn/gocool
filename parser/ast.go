@@ -22,6 +22,9 @@ type Class struct {
 	Parent   string
 	Features []*Feature
 	Filename string
+
+	// For typechecking
+	Depth int
 }
 
 type Feature struct {

@@ -28,7 +28,7 @@ func main() {
 	}
 	err = types.Check(prog)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 	fmt.Print(prog.Dump())
