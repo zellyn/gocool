@@ -26,13 +26,15 @@ var NoInherit = map[string]bool{
 	"SELF_TYPE": true,
 }
 
-func traceDepths(typename string, children map[string][]*parser.Class, depth int) error {
-	for _, child := range children[typename] {
+func traceDepths(typename string, children map[string][]string, classes map[string]*parser.Class, depth int) error {
+	// fmt.Printf("%s: %v\n", typename, children[typename])
+	for _, childName := range children[typename] {
+		child := classes[childName]
 		if child.Depth != 0 {
 			return fmt.Errorf("circular inheritance involving %s", typename)
 		}
 		child.Depth = depth
-		if err := traceDepths(child.Name, children, depth+1); err != nil {
+		if err := traceDepths(child.Name, children, classes, depth+1); err != nil {
 			return err
 		}
 	}
@@ -40,29 +42,50 @@ func traceDepths(typename string, children map[string][]*parser.Class, depth int
 }
 
 func Check(program *parser.Program) error {
-	var err = false
+	err := false
+	hasMain := false
 	classes := map[string]*parser.Class{}
-	children := map[string][]*parser.Class{}
+	children := map[string][]string{}
 
-	for _, cl := range program.Classes {
+	builtins := Builtins()
+
+	for _, cl := range builtins {
 		classes[cl.Name] = cl
-		children[cl.Parent] = append(children[cl.Parent], cl)
-		if BuiltinTypes[cl.Name] {
-			fmt.Fprintf(os.Stderr, "%s:%d: Redefinition of basic class %s.\n", cl.Filename, cl.Line, cl.Name)
-			err = true
-		}
-		if NoInherit[cl.Parent] {
-			fmt.Fprintf(os.Stderr, "%s:%d: Class %s cannot inherit class %s.\n", cl.Filename, cl.Line, cl.Name, cl.Parent)
-			err = true
+		if cl.Name != "Object" {
+			children[cl.Parent] = append(children[cl.Parent], cl.Name)
 		}
 	}
 
-	if _, ok := classes["Main"]; !ok {
+	for _, cl := range program.Classes {
+		hasMain = hasMain || cl.Name == "Main"
+		errHere := false
+		if BuiltinTypes[cl.Name] {
+			fmt.Fprintf(os.Stderr, "%s:%d: Redefinition of basic class %s.\n", cl.Filename, cl.Line, cl.Name)
+			err = true
+			errHere = true
+		} else if _, nok := classes[cl.Name]; nok {
+			fmt.Fprintf(os.Stderr, "%s:%d: Class %s was previously defined.\n", cl.Filename, cl.Line, cl.Name)
+			err = true
+			errHere = true
+		}
+
+		if NoInherit[cl.Parent] {
+			fmt.Fprintf(os.Stderr, "%s:%d: Class %s cannot inherit class %s.\n", cl.Filename, cl.Line, cl.Name, cl.Parent)
+			err = true
+			errHere = true
+		}
+		if !errHere {
+			classes[cl.Name] = cl
+			children[cl.Parent] = append(children[cl.Parent], cl.Name)
+		}
+	}
+
+	if !hasMain {
 		fmt.Fprintf(os.Stderr, "Class Main is not defined.\n")
 		err = true
 	}
 
-	if err2 := traceDepths("Object", children, 1); err2 != nil {
+	if err2 := traceDepths("Object", children, classes, 1); err2 != nil {
 		fmt.Fprintf(os.Stderr, "Found cycle\n")
 		err = true
 	}
