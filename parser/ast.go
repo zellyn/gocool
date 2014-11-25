@@ -22,6 +22,8 @@ type Class struct {
 	Parent   string
 	Features []*Feature
 	Filename string
+	Methods  map[string]*Method
+	Attrs    map[string]*Attr
 
 	// For typechecking
 	Depth int
@@ -369,4 +371,23 @@ func (f *Formal) dump(d *dumper) {
 	defer d.out()
 	d.println(f.Name)
 	d.println(f.Type)
+}
+
+// SplitFeatures splits features into Methods and Attrs on Class objects.
+func (p *Program) SplitFeatures() {
+	for _, c := range p.Classes {
+		for _, f := range c.Features {
+			if f.Attr != nil {
+				if c.Attrs == nil {
+					c.Attrs = make(map[string]*Attr)
+				}
+				c.Attrs[f.Attr.Name] = f.Attr
+			} else {
+				if c.Methods == nil {
+					c.Methods = make(map[string]*Method)
+				}
+				c.Methods[f.Method.Name] = f.Method
+			}
+		}
+	}
 }

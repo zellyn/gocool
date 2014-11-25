@@ -7,8 +7,8 @@ go build cmd/typecheck/typecheck.go || exit 1
 
 GOOD_FILES='simplearith basicclassestree expressionblock objectdispatchabort initwithself compare comparisons cycleinmethods letnoinit forwardinherits letinit newselftype basic overridingmethod letshadows neg methodcallsitself overriderenamearg isvoid overridingmethod3 inheritsObject scopes letselftype if methodnameclash trickyatdispatch stringtest overridingmethod2 simplecase assignment subtypemethodreturn dispatch io staticdispatch classes hairyscary.cl cells.cl list.cl'
 BAD_FILES='nomain badredefineint inheritsselftype returntypenoexist letself badmethodcallsitself badarith outofscope selftypeparameterposition missingclass selftypebadreturn attroverride selftyperedeclared badequalitytest2 badequalitytest dupformals self-assignment selfinformalparameter badwhilecond assignnoconform caseidenticalbranch inheritsbool inheritsstring badwhilebody anattributenamedself attrbadinit redefinedclass redefinedobject signaturechange trickyatdispatch2 letbadinit badargs1 overridingmethod4 badstaticdispatch baddispatch lubtest'
-# Previously passing tests: if we get a fail on one of these, we diff and exit immediately.
-PASSING='badredefineint inheritsbool inheritsselftype inheritsstring nomain redefinedclass redefinedobject selftyperedeclared'
+# Expected passing tests: if we get a fail on one of these, we diff and exit immediately.
+PASSING='badredefineint inheritsbool inheritsselftype inheritsstring nomain redefinedclass redefinedobject selftyperedeclared missingclass anattributenamedself attroverride redefinedclass signaturechange dupformals selfinformalparameter selftypeparameterposition'
 
 CORRECT=0
 INCORRECT=0
@@ -38,7 +38,7 @@ fail ()
 
 unexpectedfail ()
 {
-    echo " FAIL (previously passing test)"
+    echo " FAIL (unexpected)"
     diff -u testdata/typecheck/$1.test.out $OUTDIR/$1.test.out
     exit 1
 }
