@@ -652,27 +652,27 @@ yydefault:
 	case 33:
 		//line cool.y:202
 		{
-			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Text: "+", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 34:
 		//line cool.y:204
 		{
-			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Text: "-", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 35:
 		//line cool.y:206
 		{
-			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Text: "*", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 36:
 		//line cool.y:208
 		{
-			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Text: "/", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 37:
 		//line cool.y:210
 		{
-			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Neg, Left: yyS[yypt-0].expr, Text: "~", Base: Base{Line: yyS[yypt-0].expr.Line}}
 		}
 	case 38:
 		//line cool.y:212
@@ -703,7 +703,7 @@ yydefault:
 	case 43:
 		//line cool.y:225
 		{
-			yyVAL.expr = &Expr{Op: StringConst, Text: yyS[yypt-0].str, Base: Base{Line: yyS[yypt-0].line}}
+			yyVAL.expr = &Expr{Op: StringConst, Text: unescapeString(yyS[yypt-0].str), Base: Base{Line: yyS[yypt-0].line}}
 		}
 	case 44:
 		//line cool.y:227

@@ -284,7 +284,7 @@ func (e *Expr) dump(d *dumper) {
 		d.out()
 	case StringConst:
 		d.in()
-		d.printf("\"%s\"\n", printableString(unescapeString(e.Text)))
+		d.printf("\"%s\"\n", printableString(e.Text))
 		d.out()
 	case Dispatch:
 		d.in()

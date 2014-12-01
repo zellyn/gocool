@@ -199,15 +199,15 @@ expr:
 	|       ISVOID expr
 		{ $$ = &Expr{Op: Isvoid, Left: $2, Base:Base{Line:$2.Line}} }
 	|       expr '+' expr
-		{ $$ = &Expr{Op: Plus, Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Plus, Left: $1, Text: "+", Right: $3, Base:Base{Line:$3.Line}} }
 	|       expr '-' expr
-		{ $$ = &Expr{Op: Sub, Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Sub, Left: $1, Text: "-", Right: $3, Base:Base{Line:$3.Line}} }
 	|       expr '*' expr
-		{ $$ = &Expr{Op: Mul, Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Mul, Left: $1, Text: "*", Right: $3, Base:Base{Line:$3.Line}} }
 	|       expr '/' expr
-		{ $$ = &Expr{Op: Divide, Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Divide, Left: $1, Text: "/", Right: $3, Base:Base{Line:$3.Line}} }
 	|       '~' expr
-		{ $$ = &Expr{Op: Neg, Left: $2, Base:Base{Line:$2.Line}} }
+		{ $$ = &Expr{Op: Neg, Left: $2, Text: "~", Base:Base{Line:$2.Line}} }
 	|       expr CMP expr
 		{ $$ = &Expr{Op: OpForCmp($2), Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
 	|       NOT expr
@@ -222,7 +222,7 @@ expr:
 	|       NUM
 		{ $$ = &Expr{Op: IntConst, Text: $1, Base:Base{Line:$<line>1}} }
 	|     	STRING
-		{ $$ = &Expr{Op: StringConst, Text: $1, Base:Base{Line:$<line>1}} }
+		{ $$ = &Expr{Op: StringConst, Text: unescapeString($1), Base:Base{Line:$<line>1}} }
 	|	BOOL
 		{ $$ = &Expr{Op: BoolConst, Text: $1, Base:Base{Line:$<line>1}} }
 		;
