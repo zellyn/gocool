@@ -258,13 +258,13 @@ func lexComment(l *lexer) stateFn {
 		}
 		// next is a comment start
 		if left >= 0 && (right < 0 || left < right) {
-			depth += 1
+			depth++
 			l.pos += Pos(left + len(leftComment))
 			continue
 		}
 		// next is a comment end
 		l.pos += Pos(right + len(rightComment))
-		depth -= 1
+		depth--
 		if depth == 0 {
 			l.ignore()
 			break
@@ -285,7 +285,6 @@ func lexLineComment(l *lexer) stateFn {
 			return lexStart
 		}
 	}
-	return lexStart
 }
 
 // lexIdentifier scans an alphanumeric.

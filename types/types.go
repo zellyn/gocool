@@ -215,7 +215,6 @@ func (cs classes) lub(cl, t1, t2 string) string {
 		}
 		cur = cs[cur].Parent
 	}
-	panic("unreachable")
 }
 
 // lte computes whether t1 is "less than or equal to" t2 for the two
@@ -237,7 +236,6 @@ func (cs classes) lte(cl, t1, t2 string) bool {
 		}
 		cur = cs[cur].Parent
 	}
-	panic("unreachable")
 }
 
 // findSymbol takes a class name, a symbol name, and a symbol
