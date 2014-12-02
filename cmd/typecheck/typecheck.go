@@ -23,7 +23,7 @@ func main() {
 
 	prog, err := parser.Parse(filename, string(contents))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	err = types.Check(prog)

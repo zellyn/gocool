@@ -63,5 +63,6 @@ func Builtins() []*parser.Class {
 		fmt.Fprintf(os.Stderr, "Fatal error; aborting: %s\n", err)
 		os.Exit(1)
 	}
+	prog.SplitFeatures()
 	return prog.Classes
 }

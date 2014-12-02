@@ -107,7 +107,7 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 		for _, attr := range c.Attrs {
 			// No attributes whose type is undefined.
 			_, ok := cs[attr.Type]
-			if !ok {
+			if !ok && attr.Type != "SELF_TYPE" {
 				hasErr = true
 				fmt.Fprintf(os.Stderr, "%s:%d: Attribute %s.%s has undefined type %s.\n", c.Filename, attr.Line, c.Name, attr.Name, attr.Type)
 				continue
@@ -137,7 +137,7 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 		for _, method := range c.Methods {
 			// No methods whose type is undefined.
 			_, ok := cs[method.Type]
-			if !ok {
+			if !ok && method.Type != "SELF_TYPE" {
 				hasErr = true
 				fmt.Fprintf(os.Stderr, "%s:%d: Method %s.%s has undefined type %s.\n", c.Filename, method.Line, c.Name, method.Name, method.Type)
 				continue
@@ -156,7 +156,8 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 					for i, f := range method.Formals {
 						if f.Type != m2.Formals[i].Type {
 							hasErr = true
-							fmt.Fprintf(os.Stderr, "%s:%d: In method %s.%s, formal %d (%s) has type %s, but type %s in class %s at %s:%d.\n", c.Filename, method.Line, c.Name, method.Name, i, f.Name, f.Type, m2.Formals[i].Type, c2.Name, c2.Filename, m2.Line)
+							fmt.Fprintf(os.Stderr, "%s:%d: In redefined method %s, parameter type %s is different from original type %s\n", c.Filename, method.Line, method.Name, f.Type, m2.Formals[i].Type)
+
 						}
 					}
 				}
@@ -256,7 +257,7 @@ func (cs classes) findSymbol(cl string, symbol string, table symbols.Table) (typ
 
 // checkAttribute typechecks an attribute definition. It returns an error boolean.
 func (cs classes) checkAttribute(cl *parser.Class, a *parser.Attr) (err bool) {
-	if a.Init == nil {
+	if a.Init == nil || a.Init.Op == parser.NoExpr {
 		return false
 	}
 	t_0 := a.Type
@@ -279,12 +280,9 @@ func (cs classes) checkMethod(cl *parser.Class, m *parser.Method) (err bool) {
 	}
 	var tp_0 string
 	tp_0, err = cs.checkExpression(cl, m.Expr, t)
-	if err {
-		return true
-	}
 	if !cs.lte(cl.Name, tp_0, t_0) {
 		err = true
-		fmt.Fprintf(os.Stderr, "%s:%d: Method %s.%s has type %q, but declared type %q.\n", cl.Filename, m.Line, cl.Name, m.Name, tp_0, t_0)
+		fmt.Fprintf(os.Stderr, "%s:%d: Inferred return type %s of method %s does not conform to declared return type %s.\n", cl.Filename, m.Line, tp_0, m.Name, t_0)
 	}
 	return err
 }
@@ -298,16 +296,40 @@ func (cs classes) checkExpression(cl *parser.Class, e *parser.Expr, table symbol
 		typ = "Int"
 	case parser.StringConst:
 		typ = "String"
+	case parser.BoolConst:
+		typ = "Bool"
+	case parser.New:
+		typ = e.InternalType
 	case parser.Let:
 		typ, err = cs.checkLet(cl, e, table)
 	case parser.Dispatch:
 		typ, err = cs.checkDispatch(cl, e, table)
+	case parser.StaticDispatch:
+		typ, err = cs.checkStaticDispatch(cl, e, table)
 	case parser.Object:
 		typ, err = cs.checkObject(cl, e, table)
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
 		typ, err = cs.checkArith(cl, e, table)
+	case parser.Lt, parser.Leq:
+		typ, err = cs.checkCompare(cl, e, table)
+	case parser.Comp:
+		typ, err = cs.checkComplement(cl, e, table)
+	case parser.Neg:
+		typ, err = cs.checkNeg(cl, e, table)
 	case parser.Block:
 		typ, err = cs.checkBlock(cl, e, table)
+	case parser.Eq:
+		typ, err = cs.checkEq(cl, e, table)
+	case parser.Assign:
+		typ, err = cs.checkAssign(cl, e, table)
+	case parser.Loop:
+		typ, err = cs.checkLoop(cl, e, table)
+	case parser.TypCase:
+		typ, err = cs.checkTypCase(cl, e, table)
+	case parser.Cond:
+		typ, err = cs.checkCond(cl, e, table)
+	case parser.Isvoid:
+		typ, err = cs.checkIsvoid(cl, e, table)
 	default:
 		fmt.Fprintf(os.Stderr, "Typechecking not implemented for '%s' expression: %+v\n", e.Op, *e)
 		os.Exit(1)
@@ -329,10 +351,11 @@ func (cs classes) checkLet(cl *parser.Class, e *parser.Expr, table symbols.Table
 
 	tp_0 := e.InternalType
 	if e.Left.Op != parser.NoExpr {
-		t_1, err := cs.checkExpression(cl, e.Left, table)
+		var t_1 string
+		t_1, err = cs.checkExpression(cl, e.Left, table)
 		if !err && !cs.lte(cl.Name, t_1, tp_0) {
 			err = true
-			fmt.Fprintf(os.Stderr, "%s:%d: type %s of binding %s does not conform to declared type %s.\n", cl.Filename, e.Line, t_1, e.Text, tp_0)
+			fmt.Fprintf(os.Stderr, "%s:%d: Inferred type %s of initialization of %s does not conform to identifier's declared type %s.\n", cl.Filename, e.Line, t_1, e.Text, tp_0)
 		}
 	}
 	t2, err2 := cs.checkExpression(cl, e.Right, table.Add(e.Text, tp_0))
@@ -355,22 +378,101 @@ func (cs classes) checkBlock(cl *parser.Class, e *parser.Expr, table symbols.Tab
 	return typ, err
 }
 
+// checkEq typechecks an equality comparison expression.
+func (cs classes) checkEq(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t_1, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Bool", err
+	}
+	t_2, err := cs.checkExpression(cl, e.Right, table)
+	if err {
+		return "Bool", err
+	}
+	if (t_1 == "Int" || t_2 == "Int" || t_1 == "Bool" || t_2 == "Bool" || t_1 == "String" || t_2 == "String") && (t_1 != t_2) {
+		fmt.Fprintf(os.Stderr, "%s:%d: Illegal comparison with a basic type.\n", cl.Filename, e.Line)
+		return "Bool", true
+	}
+	return "Bool", false
+}
+
+// checkAssign typechecks an assign expression.
+func (cs classes) checkAssign(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	if e.Text == "self" {
+		fmt.Fprintf(os.Stderr, "%s:%d: Cannot assign to 'self'.\n", cl.Filename, e.Line)
+		return cl.Name, true
+	}
+
+	t, ok := cs.findSymbol(cl.Name, e.Text, table)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "%s:%d: Undeclared identifier %s.\n", cl.Filename, e.Line, e.Text)
+		return "Object", true
+	}
+	tp, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Object", true
+	}
+	if !cs.lte(cl.Name, tp, t) {
+		fmt.Fprintf(os.Stderr, "%s:%d: Type %s of assigned expression does not conform to declared type %s of identifier %s.\n", cl.Filename, e.Line, tp, t, e.Text)
+		return "Object", true
+	}
+	return tp, false
+}
+
 // checkDispatch typechecks a single dispatch expression within class
 // cl, with symbol table "table". It returns the resulting type of the
 // expression. If there is an error, it returns "Object", true.
 func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	t_0, err := cs.checkExpression(cl, e.Left, table)
 	if err {
-		fmt.Printf("Skipping typechecking of %+v\n", e.Left)
 		return t_0, err
 	}
 	tp_0 := t_0
 	if t_0 == "SELF_TYPE" {
 		tp_0 = cl.Name
 	}
-	c2, m := cs.findMethod(tp_0, e.Text)
+	_, m := cs.findMethod(tp_0, e.Text)
 	if m == nil {
-		fmt.Fprintf(os.Stderr, "%s:%d: Unknown method %q.\n", cl.Filename, e.Line, e.Text)
+		fmt.Fprintf(os.Stderr, "%s:%d: Dispatch to undefined method %s.\n", cl.Filename, e.Line, e.Text)
+		return "Object", true
+	}
+	if len(m.Formals) != len(e.Exprs) {
+		fmt.Fprintf(os.Stderr, "%s:%d: Got %d parameters; expected %d.\n", cl.Filename, e.Line, len(e.Exprs), len(m.Formals))
+		return "Object", true
+	}
+	for i, f := range m.Formals {
+		t_n, e2 := cs.checkExpression(cl, e.Exprs[i], table)
+		if e2 {
+			err = true
+		} else {
+			if !cs.lte(cl.Name, t_n, f.Type) {
+				err = true
+				fmt.Fprintf(os.Stderr, "%s:%d: In call of method %s, type %s of parameter %s does not conform to declared type %s.\n", cl.Filename, e.Line, m.Name, t_n, f.Name, f.Type)
+			}
+		}
+	}
+	if err {
+		return "Object", true
+	}
+
+	if m.Type == "SELF_TYPE" {
+		return t_0, false
+	}
+	return m.Type, false
+}
+
+// checkStaticDispatch typechecks a static dispatch expression.
+func (cs classes) checkStaticDispatch(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t_0, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return t_0, err
+	}
+	if !cs.lte(cl.Name, t_0, e.InternalType) {
+		fmt.Fprintf(os.Stderr, "%s:%d: Expression type %s does not conform to declared static dispatch type %s.\n", cl.Filename, e.Line, t_0, e.InternalType)
+		return "Object", true
+	}
+	_, m := cs.findMethod(e.InternalType, e.Text)
+	if m == nil {
+		fmt.Fprintf(os.Stderr, "%s:%d: Dispatch to undefined method %s.%s.\n", cl.Filename, e.Line, e.InternalType, e.Text)
 		return "Object", true
 	}
 	if len(m.Formals) != len(e.Exprs) {
@@ -393,7 +495,7 @@ func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.
 	}
 
 	if m.Type == "SELF_TYPE" {
-		return c2.Name, false
+		return t_0, false
 	}
 	return m.Type, false
 }
@@ -423,6 +525,116 @@ func (cs classes) checkArith(cl *parser.Class, e *parser.Expr, table symbols.Tab
 		return "Int", true
 	}
 	return "Int", false
+}
+
+// checkCompare typechecks a comparison operator expression.
+func (cs classes) checkCompare(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, e1 := cs.checkExpression(cl, e.Left, table)
+	t2, e2 := cs.checkExpression(cl, e.Right, table)
+	if e1 || e2 {
+		return "Bool", true
+	}
+	if t1 != "Int" || t2 != "Int" {
+		fmt.Fprintf(os.Stderr, "%s:%d: non-Int arguments: %s %s %s\n", cl.Filename, e.Line, t1, e.Text, t2)
+		return "Bool", true
+	}
+	return "Bool", false
+}
+
+// checkComplement typechecks a complement (not) operator expression.
+func (cs classes) checkComplement(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Bool", true
+	}
+	if t1 != "Bool" {
+		fmt.Fprintf(os.Stderr, "%s:%d: non-Bool argument to complement.\n", cl.Filename, e.Line)
+		return "Bool", true
+	}
+	return "Bool", false
+}
+
+// checkNeg typechecks a neg (bit flip) operator expression.
+func (cs classes) checkNeg(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Int", true
+	}
+	if t1 != "Int" {
+		fmt.Fprintf(os.Stderr, "%s:%d: non-Int argument to neg.\n", cl.Filename, e.Line)
+		return "Int", true
+	}
+	return "Int", false
+}
+
+// checkLoop typechecks a loop expression.
+func (cs classes) checkLoop(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Object", true
+	}
+	if t1 != "Bool" {
+		fmt.Fprintf(os.Stderr, "%s:%d: Loop condition does not have type Bool.\n", cl.Filename, e.Line)
+		return "Object", true
+	}
+	if _, err := cs.checkExpression(cl, e.Right, table); err {
+		return "Object", true
+	}
+	return "Object", false
+}
+
+// checkTypCase typechecks a typcase expression.
+func (cs classes) checkTypCase(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	_, err = cs.checkExpression(cl, e.Left, table)
+	typesSeen := make(map[string]bool)
+	lub := ""
+	for _, b := range e.Exprs {
+		if b.Text == "self" {
+			fmt.Fprintf(os.Stderr, "%s:%d: Cannot use 'self' as variable in case statement.\n", cl.Filename, b.Line)
+			return "Object", true
+		}
+		if typesSeen[b.Type] {
+			fmt.Fprintf(os.Stderr, "%s:%d: Duplicate branch %s in case statement.\n", cl.Filename, b.Line, b.Type)
+			err = true
+		}
+		typesSeen[b.Type] = true
+
+		tp_n, e2 := cs.checkExpression(cl, b.Left, table.Add(b.Text, b.Type))
+		err = err || e2
+		if lub == "" {
+			lub = tp_n
+		} else {
+			lub = cs.lub(cl.Name, lub, tp_n)
+		}
+	}
+	return lub, err
+}
+
+// checkCond typechecks a cond expression.
+func (cs classes) checkCond(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := cs.checkExpression(cl, e.Left, table)
+	if err {
+		return "Object", true
+	}
+	if t1 != "Bool" {
+		fmt.Fprintf(os.Stderr, "%s:%d: Cond condition does not have type Bool.\n", cl.Filename, e.Line)
+		return "Object", true
+	}
+	t2, err := cs.checkExpression(cl, e.Right, table)
+	if err {
+		return "Object", true
+	}
+	t3, err := cs.checkExpression(cl, e.Else, table)
+	if err {
+		return "Object", true
+	}
+	return cs.lub(cl.Name, t2, t3), false
+}
+
+// checkIsvoid typechecks an isvoid expression.
+func (cs classes) checkIsvoid(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	_, err = cs.checkExpression(cl, e.Left, table)
+	return "Bool", err
 }
 
 func Check(program *parser.Program) error {

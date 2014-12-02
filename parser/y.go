@@ -652,22 +652,22 @@ yydefault:
 	case 33:
 		//line cool.y:202
 		{
-			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Text: "+", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Plus, Left: yyS[yypt-2].expr, Text: "+", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-1].line}}
 		}
 	case 34:
 		//line cool.y:204
 		{
-			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Text: "-", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Sub, Left: yyS[yypt-2].expr, Text: "-", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-1].line}}
 		}
 	case 35:
 		//line cool.y:206
 		{
-			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Text: "*", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Mul, Left: yyS[yypt-2].expr, Text: "*", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-1].line}}
 		}
 	case 36:
 		//line cool.y:208
 		{
-			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Text: "/", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: Divide, Left: yyS[yypt-2].expr, Text: "/", Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-1].line}}
 		}
 	case 37:
 		//line cool.y:210
@@ -677,7 +677,7 @@ yydefault:
 	case 38:
 		//line cool.y:212
 		{
-			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-0].expr.Line}}
+			yyVAL.expr = &Expr{Op: OpForCmp(yyS[yypt-1].str), Left: yyS[yypt-2].expr, Right: yyS[yypt-0].expr, Base: Base{Line: yyS[yypt-1].line}}
 		}
 	case 39:
 		//line cool.y:214

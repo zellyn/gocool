@@ -199,17 +199,17 @@ expr:
 	|       ISVOID expr
 		{ $$ = &Expr{Op: Isvoid, Left: $2, Base:Base{Line:$2.Line}} }
 	|       expr '+' expr
-		{ $$ = &Expr{Op: Plus, Left: $1, Text: "+", Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Plus, Left: $1, Text: "+", Right: $3, Base:Base{Line:$<line>2}} }
 	|       expr '-' expr
-		{ $$ = &Expr{Op: Sub, Left: $1, Text: "-", Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Sub, Left: $1, Text: "-", Right: $3, Base:Base{Line:$<line>2}} }
 	|       expr '*' expr
-		{ $$ = &Expr{Op: Mul, Left: $1, Text: "*", Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Mul, Left: $1, Text: "*", Right: $3, Base:Base{Line:$<line>2}} }
 	|       expr '/' expr
-		{ $$ = &Expr{Op: Divide, Left: $1, Text: "/", Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: Divide, Left: $1, Text: "/", Right: $3, Base:Base{Line:$<line>2}} }
 	|       '~' expr
 		{ $$ = &Expr{Op: Neg, Left: $2, Text: "~", Base:Base{Line:$2.Line}} }
 	|       expr CMP expr
-		{ $$ = &Expr{Op: OpForCmp($2), Left: $1, Right: $3, Base:Base{Line:$3.Line}} }
+		{ $$ = &Expr{Op: OpForCmp($2), Left: $1, Right: $3, Base:Base{Line:$<line>2}} }
 	|       NOT expr
 		{ $$ = &Expr{Op: Comp, Left: $2, Base:Base{Line:$2.Line}} }
 	|       '(' expr ')'
