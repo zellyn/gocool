@@ -10,7 +10,7 @@ _program
     _method
       foo
       A
-      #6
+      #7
       _let
         x
         A
@@ -50,7 +50,7 @@ _program
     _method
       foo
       A
-      #14
+      #15
       _object
         self
       : SELF_TYPE

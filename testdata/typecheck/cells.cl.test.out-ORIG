@@ -263,9 +263,9 @@ _program
       _cond
         #52
         _eq
-          #51
+          #52
           _plus
-            #50
+            #51
             _plus
               #49
               _cond

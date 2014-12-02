@@ -1,3 +1,2 @@
 letself.test:3: 'self' cannot be bound in a 'let' expression.
-letself.test:3: Inferred return type Object of method main does not conform to declared return type Int.
 Compilation halted due to static semantic errors.

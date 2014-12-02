@@ -53,13 +53,13 @@ _program
     _method
       compare
       Bool
-      #10
+      #11
       _eq
         #10
         _object
           a
         : A
-        #10
+        #11
         _object
           b
         : B
