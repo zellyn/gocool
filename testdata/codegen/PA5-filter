@@ -1,0 +1,17 @@
+#!/usr/bin/sed -f
+s/^..*\.cl:[0-9]*//
+s/Garbage collecting \.\.\.//
+s/Major//
+s/Minor//
+s/Increasing heap\.\.\.//
+/^GenGC initialized.$/d
+/^$/d
+/^Stats --.*$/{N;d;}
+/Loaded: .*trap\.handler/d
+/^The following symbols are undefined:$/d
+/^main$/d
+/^SPIM Version 6.5 of January 4, 2003$/d
+/^Copyright 1990-2003 by James R. Larus (larus@cs.wisc.edu).$/d
+/^All Rights Reserved.$/d
+/^See the file README for a full copyright notice.$/d
+
