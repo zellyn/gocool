@@ -194,7 +194,10 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 // t2 is not.
 func (cs classes) lub(cl, t1, t2 string) string {
 	if t2 == "SELF_TYPE" {
-		panic("lub: t2 cannot be SELF_TYPE")
+		if t1 == "SELF_TYPE" {
+			return t1
+		}
+		t2 = cl
 	}
 	cur := t1
 	if t1 == "SELF_TYPE" {
@@ -331,6 +334,7 @@ func (cs classes) checkExpression(cl *parser.Class, e *parser.Expr, table symbol
 	default:
 		fmt.Fprintf(os.Stderr, "Typechecking not implemented for '%s' expression: %+v\n", e.Op, *e)
 		os.Exit(1)
+
 	}
 	if !err && e.Type == "" {
 		e.Type = typ
@@ -639,7 +643,6 @@ func Check(program *parser.Program) error {
 	program.SplitFeatures()
 
 	err := false
-	hasMain := false
 	cs := make(classes)
 	children := map[string][]string{}
 
@@ -653,7 +656,6 @@ func Check(program *parser.Program) error {
 	}
 
 	for _, cl := range program.Classes {
-		hasMain = hasMain || cl.Name == "Main"
 		errHere := false
 		if builtinTypes[cl.Name] {
 			fmt.Fprintf(os.Stderr, "%s:%d: Redefinition of basic class %s.\n", cl.Filename, cl.Line, cl.Name)
@@ -668,7 +670,7 @@ func Check(program *parser.Program) error {
 		if noInherit[cl.Parent] {
 			fmt.Fprintf(os.Stderr, "%s:%d: Class %s cannot inherit class %s.\n", cl.Filename, cl.Line, cl.Name, cl.Parent)
 			err = true
-			errHere = true
+			cl.Parent = "Object"
 		}
 		if !errHere {
 			cs[cl.Name] = cl
@@ -676,9 +678,19 @@ func Check(program *parser.Program) error {
 		}
 	}
 
-	if !hasMain {
+	if m, ok := cs["Main"]; !ok {
 		fmt.Fprintf(os.Stderr, "Class Main is not defined.\n")
 		err = true
+	} else {
+		if mm, ok := m.Methods["main"]; !ok {
+			fmt.Fprintf(os.Stderr, "Method Main.main is not defined.\n")
+			err = true
+		} else {
+			if len(mm.Formals) != 0 {
+				fmt.Fprintf(os.Stderr, "Method Main.main shouldn't take arguments.\n")
+				err = true
+			}
+		}
 	}
 
 	cs.traceDepths("Object", children, 1)
