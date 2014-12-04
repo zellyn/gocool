@@ -4,4 +4,10 @@ gocool
 Go implementation of the Cool programming language.
 
 * TODOs
-- [ ] Check that "self" cannot be used as an attribute, function parameter, case variable, etc.
+- [X] Check that "self" cannot be used as an attribute, function parameter, case variable, etc.
+
+* Code generation
+Stack machine with accumulator
+Accumulator: $a0
+$sp points to next location in stack (so $sp+4 is the top of the stack)
+$t1 as temporary register
