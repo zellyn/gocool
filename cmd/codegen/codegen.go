@@ -33,5 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	cgen.Gen(prog, os.Stdout)
+	asm := cgen.NewAsm(os.Stdout)
+	cgen.Gen(prog, asm)
 }

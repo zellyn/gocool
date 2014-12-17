@@ -6,8 +6,85 @@ Go implementation of the Cool programming language.
 * TODOs
 - [X] Check that "self" cannot be used as an attribute, function parameter, case variable, etc.
 
+* MIPS registers
+|----------------+--------------+------------------------------------+-------------------|
+| Number         | Name         | Function                           | Callee preserves? |
+|----------------+--------------+------------------------------------+-------------------|
+| $0             | zero         | always has value zero              |                   |
+| $1             | at           | assembler temporary                |                   |
+| $2-$3          | v0,v1        | function results. Can be temporary |                   |
+| $4-$7          | a0,a1,a2,a3  | function arguments                 |                   |
+| $8-$15,$24,$25 | t0,...,t7,t9 | temporary registers                |                   |
+| $16-$23        | s0,...,s7    | saved registers                    | Yes               |
+| $26,$27        | k0,k1        | Reserved for OS kernel             |                   |
+| $28            | gp           | global pointer                     | Yes               |
+| $29            | sp           | stack pointer                      | Yes               |
+| $30            | fp           | frame pointer                      | Yes               |
+| $31            | ra           | return address                     |                   |
+|----------------+--------------+------------------------------------+-------------------|
+
 * Code generation
 Stack machine with accumulator
-Accumulator: $a0
+
+Accumulator: $a0: almost always holds self.
 $sp points to next location in stack (so $sp+4 is the top of the stack)
 $t1 as temporary register
+
+** Activation Record
+- Return address
+- Old frame pointer
+- n arguments
+- NT(e) temporary locations
+
+| arg_1          |                 |
+| ⋮              |                 |
+| arg_n          |                 |
+|----------------+-----------------|
+| Old FP         | <-- SP on entry |
+| Return address |                 |
+| Temp NT(e)     |                 |
+| ⋮              |                 |
+| Temp 1         | <-- New FP      |
+|                | <-- New SP      |
+
+** Object layout
+
+| -4 | FFFF - garbage collector tag  |
+|  0 | class tag                     |
+|  4 | object size (in 32-bit words) |
+|  8 | dispatch pointer              |
+| 12 | attributes                    |
+|  ⋮ | ⋮                             |
+
+Strings:
+
+| 12 | Length: pointer to an Int                            |
+| 16 | Characters, nul-terminated, zero-padded to next word |
+|  ⋮ | ⋮                                                    |
+
+** TODOs
+
+*** DONE Create _int_tag, _bool_tag, _string_tag
+*** TODO Define constants for all object tags: TAG_<type>
+# Example:
+TAG_Main = 5
+
+*** DONE Define prototypes for all types <type>_protObj
+*** DONE Define all constants (bool, int, string)
+- [X] Bool false: bool_False
+- [X] Bool true: bool_True
+- [X] Strings: str_const%d (%d = counter)
+  - [X] String str_const0 = filename
+  - [X] String constants for class names
+  - [X] Note that strings need ints for their lengths too
+- [X] Ints: int_const%d (%d = the (unsigned) value of the int)
+*** TODO Define _MemMgr_INITIALIZER, _MemMgr_COLLECTOR, _MemMgr_TEST
+*** DONE Create class_nameTab - table of pointers to class type name strings
+*** DONE Create do-nothing functions for Object_init, IO_init, Int_init, Bool_init, String_init
+*** TODO Create actual init functions for anything else: <type>_init
+*** TODO Create dispatch tables for all objects: <type>_dispTab
+*** TODO Create code for functions: <type>.<method>
+
+
+
+

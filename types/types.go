@@ -193,10 +193,10 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 // allowed to be "SELF_TYPE" (which is the reason for passing cl), but
 // t2 is not.
 func (cs classes) lub(cl, t1, t2 string) string {
+	if t1 == t2 {
+		return t1
+	}
 	if t2 == "SELF_TYPE" {
-		if t1 == "SELF_TYPE" {
-			return t1
-		}
 		t2 = cl
 	}
 	cur := t1
@@ -247,8 +247,8 @@ func (cs classes) lte(cl, t1, t2 string) bool {
 // class and its parents. If it finds the symbol, it returns its type,
 // and true. Otherwise, it returns false.
 func (cs classes) findSymbol(cl string, symbol string, table symbols.Table) (typ string, ok bool) {
-	if t, ok := table.Get(symbol); ok {
-		return t, true
+	if entry, ok := table.Get(symbol); ok {
+		return entry.Type, true
 	}
 	if _, a := cs.findAttr(cl, symbol); a != nil {
 		return a.Type, true
@@ -263,7 +263,7 @@ func (cs classes) checkAttribute(cl *parser.Class, a *parser.Attr) (err bool) {
 	}
 	t_0 := a.Type
 	var t_1 string
-	t_1, err = cs.checkExpression(cl, a.Init, symbols.NewTable())
+	t_1, err = cs.checkExpression(cl, a.Init, symbols.Table{})
 	if !cs.lte(cl.Name, t_1, t_0) {
 		err = true
 		fmt.Fprintf(os.Stderr, "%s:%d: Initialization expression for %s.%s has type %q, but attribute has declared type %q.\n", cl.Filename, a.Line, cl.Name, a.Name, t_1, t_0)
@@ -275,9 +275,9 @@ func (cs classes) checkAttribute(cl *parser.Class, a *parser.Attr) (err bool) {
 // checkMethod typechecks a method definition.
 func (cs classes) checkMethod(cl *parser.Class, m *parser.Method) (err bool) {
 	t_0 := m.Type
-	t := symbols.NewTable()
+	t := symbols.Table{}
 	for _, f := range m.Formals {
-		t = t.Add(f.Name, f.Type)
+		t = t.Add(f.Name, f.Type, "")
 	}
 	var tp_0 string
 	tp_0, err = cs.checkExpression(cl, m.Expr, t)
@@ -360,7 +360,7 @@ func (cs classes) checkLet(cl *parser.Class, e *parser.Expr, table symbols.Table
 			fmt.Fprintf(os.Stderr, "%s:%d: Inferred type %s of initialization of %s does not conform to identifier's declared type %s.\n", cl.Filename, e.Line, t_1, e.Text, tp_0)
 		}
 	}
-	t2, err2 := cs.checkExpression(cl, e.Right, table.Add(e.Text, tp_0))
+	t2, err2 := cs.checkExpression(cl, e.Right, table.Add(e.Text, tp_0, ""))
 	if err2 {
 		err = true
 	}
@@ -601,7 +601,7 @@ func (cs classes) checkTypCase(cl *parser.Class, e *parser.Expr, table symbols.T
 		}
 		typesSeen[b.Type] = true
 
-		tp_n, e2 := cs.checkExpression(cl, b.Left, table.Add(b.Text, b.Type))
+		tp_n, e2 := cs.checkExpression(cl, b.Left, table.Add(b.Text, b.Type, ""))
 		err = err || e2
 		if lub == "" {
 			lub = tp_n
@@ -637,6 +637,38 @@ func (cs classes) checkCond(cl *parser.Class, e *parser.Expr, table symbols.Tabl
 func (cs classes) checkIsvoid(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	_, err = cs.checkExpression(cl, e.Left, table)
 	return "Bool", err
+}
+
+// generateSymbolTables generates symbol tables for class attributes and methods.
+func (cs classes) generateSymbolTables(typ string, children map[string][]string) {
+	cl := cs[typ]
+	var attrTable symbols.Table
+	var methodTable symbols.Table
+
+	if cl.Parent != "Object" {
+		parent := cs[cl.Parent]
+		attrTable = parent.AttrTable
+		methodTable = parent.MethodTable
+	}
+
+	// Add all the attributes to the attribute symbol table for this class.
+	// Add any new methods to the method symbol table.
+	for _, f := range cl.Features {
+		if f.Attr != nil {
+			attrTable = attrTable.Add(f.Attr.Name, f.Attr.Type, cl.Name)
+		} else {
+			if !methodTable.Has(f.Method.Name) {
+				methodTable = methodTable.Add(f.Method.Name, f.Method.Type, cl.Name)
+			}
+		}
+	}
+	cl.AttrTable = attrTable
+	cl.MethodTable = methodTable
+
+	// Generate symbol tables for all children, with this class's table as a starting point.
+	for _, child := range children[typ] {
+		cs.generateSymbolTables(child, children)
+	}
 }
 
 func Check(program *parser.Program) error {
@@ -696,6 +728,8 @@ func Check(program *parser.Program) error {
 	cs.traceDepths("Object", children, 1)
 
 	err = err || cs.checkInterfaces()
+
+	cs.generateSymbolTables("Object", children)
 
 	for _, cl := range program.Classes {
 		for _, f := range cl.Features {

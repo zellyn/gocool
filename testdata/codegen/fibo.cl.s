@@ -388,13 +388,22 @@ label5:
 	la	$a0 int_const1
 	b	label4
 label3:
+		# else fibo(i-1)+fibo(i-2)
+		# s2 = first arg
 	lw	$s2 20($fp)
+		# a0 = 1
 	la	$a0 int_const1
+		# make a copy so we can mutate it
 	jal	Object.copy
+		# t2 = arg2 intval
 	lw	$t2 12($a0)
+		# t1 = arg1 intval
 	lw	$t1 12($s2)
+		# subtract
 	sub	$t1 $t1 $t2
+		# store back
 	sw	$t1 12($a0)
+		# push function arg
 	sw	$a0 0($sp)
 	addiu	$sp $sp -4
 	move	$a0 $s0
@@ -405,7 +414,7 @@ label3:
 label6:
 	lw	$t1 8($a0)
 	lw	$t1 28($t1)
-	jalr		$t1
+	jalr		$t1  # first recursive call
 	move	$s2 $a0
 	lw	$s1 20($fp)
 	la	$a0 int_const2

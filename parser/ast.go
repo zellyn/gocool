@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/zellyn/gocool/symbols"
 )
 
 type Base struct {
@@ -26,7 +28,9 @@ type Class struct {
 	Attrs    map[string]*Attr
 
 	// For typechecking
-	Depth int
+	Depth       int
+	AttrTable   symbols.Table
+	MethodTable symbols.Table
 }
 
 type Feature struct {
@@ -41,6 +45,7 @@ type Method struct {
 	Formals []*Formal
 	Type    string
 	Expr    *Expr
+	table   symbols.Table
 }
 
 type Attr struct {
