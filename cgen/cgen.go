@@ -147,11 +147,15 @@ func writeClassnameTable(c *constants, tags map[string]int, a asm) {
 // writeBuiltinInits writes out the init functions for builtin classes.
 func writeBuiltinInits(a asm) {
 	a.CommentH2("Init functions for builtin types.")
-	a.Label("Object_init")
-	a.Label("IO_init")
+	a.Comment("Labels needed by runtime.")
 	a.Label("Int_init")
-	a.Label("Bool_init")
 	a.Label("String_init")
+	a.Comment("Labels needed by generated code.")
+	a.Label("Object._init")
+	a.Label("Int._init")
+	a.Label("Bool._init")
+	a.Label("String._init")
+	a.Label("IO._init")
 	a.Inst("jr", "$ra", "Do nothing.")
 }
 
@@ -230,8 +234,8 @@ func writeDispatchTables(prog *parser.Program, cs parser.Classes, tags map[strin
 	for _, name := range classNames {
 		cl := cs[name]
 		a.CommentH2(name)
-		a.ObjTag()
 		a.Label(fmt.Sprintf("%s_dispTab", name))
+		a.WordS(fmt.Sprintf("%s_protObj", name))
 		symbols := cl.MethodTable
 		for _, e := range symbols.Entries {
 			a.WordS(fmt.Sprintf("%s.%s", e.Class, e.Name))

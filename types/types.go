@@ -87,6 +87,7 @@ func findAttr(cs parser.Classes, typ string, attrName string) (*parser.Class, *p
 // 7. No method arguments with the name 'self'.
 // 8. No redefinition of attributes.
 // 9. No redefinition of methods with different signatures.
+// 10. No methods named "_init".
 func checkInterfaces(cs parser.Classes) (hasErr bool) {
 	for name, c := range cs {
 		if builtinTypes[name] {
@@ -133,6 +134,12 @@ func checkInterfaces(cs parser.Classes) (hasErr bool) {
 
 		// Iterate over Methods
 		for _, method := range c.Methods {
+			// No methods named _init.
+			if method.Name == "_init" {
+				hasErr = true
+				fmt.Fprintf(os.Stderr, "%s:%d: Illegal method name _init.\n", c.Filename, method.Line)
+				continue
+			}
 			// No methods whose type is undefined.
 			_, ok := cs[method.Type]
 			if !ok && method.Type != "SELF_TYPE" {
@@ -648,6 +655,10 @@ func generateSymbolTables(cs parser.Classes, typ string, children map[string][]s
 		attrTable = parent.AttrTable
 		methodTable = parent.MethodTable
 	}
+	methodTable, err := methodTable.Replace("_init", "SELF_TYPE", cl.Name)
+	if err != nil {
+		panic(err)
+	}
 
 	// Add all the attributes to the attribute symbol table for this class.
 	// Add any new methods to the method symbol table.
@@ -655,8 +666,9 @@ func generateSymbolTables(cs parser.Classes, typ string, children map[string][]s
 		if f.Attr != nil {
 			attrTable = attrTable.Add(f.Attr.Name, f.Attr.Type, cl.Name)
 		} else {
-			if !methodTable.Has(f.Method.Name) {
-				methodTable = methodTable.Add(f.Method.Name, f.Method.Type, cl.Name)
+			methodTable, err = methodTable.Replace(f.Method.Name, f.Method.Type, cl.Name)
+			if err != nil {
+				panic(err)
 			}
 		}
 	}

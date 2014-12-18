@@ -3,6 +3,8 @@
 // the new table.
 package symbols
 
+import "fmt"
+
 // An entry holds a single Entry in the symbol table
 type Entry struct {
 	Name  string
@@ -39,6 +41,39 @@ func (t Table) Add(name string, typ string, class string) Table {
 		NextStack:   t.NextStack,
 		NextFeature: t.NextFeature + 1,
 	}
+}
+
+func (t Table) Replace(name string, typ string, class string) (Table, error) {
+	if class == "" {
+		return Table{}, fmt.Errorf("Table.Replace called with no class.")
+	}
+
+	e, found := t.Get(name)
+	if !found {
+		return t.Add(name, typ, class), nil
+	}
+
+	if e.Class == "" {
+		return Table{}, fmt.Errorf("Table.Replace cannot replace %q, because the previous entry has no class.", name)
+	}
+	if e.Type != typ {
+		return Table{}, fmt.Errorf("Table.Replace cannot replace %q, because the previous entry has type %q, but the new entry has type %q.", name, e.Type, typ)
+	}
+
+	es := make([]Entry, len(t.Entries))
+	copy(es, t.Entries)
+
+	for i := len(es) - 1; i >= 0; i-- {
+		if es[i].Name == name {
+			es[i] = Entry{name, typ, class, es[i].Index}
+			break
+		}
+	}
+	return Table{
+		Entries:     es,
+		NextStack:   t.NextStack,
+		NextFeature: t.NextFeature,
+	}, nil
 }
 
 func (t Table) Append(t2 Table) Table {
