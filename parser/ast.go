@@ -18,6 +18,8 @@ type Program struct {
 	Classes []*Class
 }
 
+type Classes map[string]*Class
+
 type Class struct {
 	Base
 	Name     string
@@ -27,7 +29,7 @@ type Class struct {
 	Methods  map[string]*Method
 	Attrs    map[string]*Attr
 
-	// For typechecking
+	// For typechecking and codegen
 	Depth       int
 	AttrTable   symbols.Table
 	MethodTable symbols.Table

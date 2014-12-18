@@ -8,16 +8,25 @@ import (
 	"github.com/zellyn/gocool/parser"
 )
 
-var builtins = map[string]bool{
-	"Object": true,
-	"Int":    true,
-	"Bool":   true,
-	"String": true,
-	"IO":     true,
+var builtins = []string{
+	"Object",
+	"Int",
+	"Bool",
+	"String",
+	"IO",
+}
+
+var builtinsMap map[string]bool
+
+func init() {
+	builtinsMap = make(map[string]bool, len(builtins))
+	for _, s := range builtins {
+		builtinsMap[s] = true
+	}
 }
 
 // Gen performs codegen for an entire program.
-func Gen(prog *parser.Program, a asm) {
+func Gen(prog *parser.Program, cs parser.Classes, a asm) {
 	tags := genTags(prog)
 	constants := progConstants(prog)
 	writeConstants(constants, tags, a)
@@ -26,6 +35,9 @@ func Gen(prog *parser.Program, a asm) {
 	writeBuiltinTags(tags, a)
 	writeBuiltinPrototypes(tags, a)
 	writePrototypes(prog, tags, a)
+	writeDispatchTables(prog, cs, tags, a)
+	inits := generateInits(prog)
+	_ = inits // xyzzy
 }
 
 // genTags generates an integer tag for each class.
@@ -73,7 +85,7 @@ func writeConstants(c *constants, tags map[string]int, a asm) {
 	a.Word(1)
 
 	// Write out integers in int-sort order.
-	a.CommentH2("Integers")
+	a.CommentH2("Ints")
 	var ints []int
 	for i := range c.ints {
 		ints = append(ints, i)
@@ -159,7 +171,7 @@ func writeBuiltinPrototypes(tags map[string]int, a asm) {
 	a.CommentH1("Builtin Prototypes")
 
 	a.Comment("Bool prototype written as Bool False constant.")
-	a.Comment("Integer prototype written as Integer 0 constant.")
+	a.Comment("Int prototype written as Int 0 constant.")
 	a.Comment("String prototype written as empty String constant.")
 
 	a.CommentH2("Object")
@@ -192,7 +204,7 @@ func writePrototypes(prog *parser.Program, tags map[string]int, a asm) {
 		for _, e := range symbols.Entries {
 			value := "0"
 			switch e.Type {
-			case "Integer":
+			case "Int":
 				value = "Int_protObj"
 			case "Bool":
 				value = "Bool_protObj"
@@ -202,6 +214,60 @@ func writePrototypes(prog *parser.Program, tags map[string]int, a asm) {
 			a.WordS(value, e.Type)
 		}
 	}
+}
+
+// writeDispatchTables writes the dispatch tables for all objects.
+func writeDispatchTables(prog *parser.Program, cs parser.Classes, tags map[string]int, a asm) {
+	a.CommentH1("Dispatch tables")
+
+	// Do a bit of a dance to output classes a tidy order: builtins
+	// first, then by definition.
+	classNames := builtins
+	for _, cl := range prog.Classes {
+		classNames = append(classNames, cl.Name)
+	}
+
+	for _, name := range classNames {
+		cl := cs[name]
+		a.CommentH2(name)
+		a.ObjTag()
+		a.Label(fmt.Sprintf("%s_dispTab", name))
+		symbols := cl.MethodTable
+		for _, e := range symbols.Entries {
+			a.WordS(fmt.Sprintf("%s.%s", e.Class, e.Name))
+		}
+	}
+}
+
+type attrInit struct {
+	block      *parser.Expr
+	parentInit string
+}
+
+// generateInits generates the init expressions for user-defined classes.
+func generateInits(prog *parser.Program) []attrInit {
+	inits := []attrInit{}
+	for _, cl := range prog.Classes {
+		block := &parser.Expr{
+			Op: parser.Block,
+		}
+		for _, f := range cl.Features {
+			if f.Method != nil {
+				continue
+			}
+			if f.Attr.Init.Op == parser.NoExpr {
+				continue
+			}
+			block.Exprs = append(block.Exprs, &parser.Expr{
+			// xyzzy
+			})
+		}
+		inits = append(inits, attrInit{
+			block:      block,
+			parentInit: fmt.Sprintf("%s_init", cl.Parent),
+		})
+	}
+	return inits
 }
 
 // genExpr generates the code for a single expression

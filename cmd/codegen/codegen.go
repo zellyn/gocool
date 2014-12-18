@@ -27,12 +27,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	err = types.Check(prog)
+	classes, err := types.Check(prog)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 
 	asm := cgen.NewAsm(os.Stdout)
-	cgen.Gen(prog, asm)
+	cgen.Gen(prog, classes, asm)
 }

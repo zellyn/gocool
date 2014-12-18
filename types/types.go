@@ -29,23 +29,21 @@ var noInherit = map[string]bool{
 	"SELF_TYPE": true,
 }
 
-type classes map[string]*parser.Class
-
 // traceDepths traces out the tree of objects, starting at Object, and
 // assigning a depth (Object=1, its children 2, etc.). Any object that
 // lacks a depth must have an undefined parent, or a cycle.
-func (cs classes) traceDepths(typ string, children map[string][]string, depth int) {
+func traceDepths(cs parser.Classes, typ string, children map[string][]string, depth int) {
 	// fmt.Printf("%s: %v\n", typ, children[typ])
 	for _, childName := range children[typ] {
 		child := cs[childName]
 		child.Depth = depth
-		cs.traceDepths(child.Name, children, depth+1)
+		traceDepths(cs, child.Name, children, depth+1)
 	}
 }
 
 // findMethod finds the nearest definition of methodName, starting
 // with type typ, climbing the parent chain until it finds it.
-func (cs classes) findMethod(typ string, methodName string) (*parser.Class, *parser.Method) {
+func findMethod(cs parser.Classes, typ string, methodName string) (*parser.Class, *parser.Method) {
 	c, ok := cs[typ]
 	if !ok {
 		return nil, nil
@@ -58,12 +56,12 @@ func (cs classes) findMethod(typ string, methodName string) (*parser.Class, *par
 	if typ == "Object" {
 		return nil, nil
 	}
-	return cs.findMethod(c.Parent, methodName)
+	return findMethod(cs, c.Parent, methodName)
 }
 
 // findAttr finds the nearest definition of attrName, starting
 // with type typ, climbing the parent chain until it finds it.
-func (cs classes) findAttr(typ string, attrName string) (*parser.Class, *parser.Attr) {
+func findAttr(cs parser.Classes, typ string, attrName string) (*parser.Class, *parser.Attr) {
 	c, ok := cs[typ]
 	if !ok {
 		return nil, nil
@@ -76,7 +74,7 @@ func (cs classes) findAttr(typ string, attrName string) (*parser.Class, *parser.
 	if typ == "Object" {
 		return nil, nil
 	}
-	return cs.findAttr(c.Parent, attrName)
+	return findAttr(cs, c.Parent, attrName)
 }
 
 // checkInterfaces checks that the defined interfaces of classes obey the rules:
@@ -89,7 +87,7 @@ func (cs classes) findAttr(typ string, attrName string) (*parser.Class, *parser.
 // 7. No method arguments with the name 'self'.
 // 8. No redefinition of attributes.
 // 9. No redefinition of methods with different signatures.
-func (cs classes) checkInterfaces() (hasErr bool) {
+func checkInterfaces(cs parser.Classes) (hasErr bool) {
 	for name, c := range cs {
 		if builtinTypes[name] {
 			continue
@@ -127,7 +125,7 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 			attrs[attr.Name] = true
 
 			// No redefinition of attributes (from parent classes)
-			if c2, a2 := cs.findAttr(c.Parent, attr.Name); c2 != nil {
+			if c2, a2 := findAttr(cs, c.Parent, attr.Name); c2 != nil {
 				hasErr = true
 				fmt.Fprintf(os.Stderr, "%s:%d: Attribute %s.%s is already defined in class %s at %s:%d.\n", c.Filename, attr.Line, c.Name, attr.Name, c2.Name, c2.Filename, a2.Line)
 			}
@@ -144,7 +142,7 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 			}
 
 			// No redefinition of methods with different signatures.
-			if c2, m2 := cs.findMethod(c.Parent, method.Name); c2 != nil {
+			if c2, m2 := findMethod(cs, c.Parent, method.Name); c2 != nil {
 				if method.Type != m2.Type {
 					hasErr = true
 					fmt.Fprintf(os.Stderr, "%s:%d: Method %s.%s has type %s here, but type %s in class %s at %s:%d.\n", c.Filename, method.Line, method.Type, m2.Type, c2.Name, c2.Filename, m2.Line)
@@ -192,7 +190,7 @@ func (cs classes) checkInterfaces() (hasErr bool) {
 // lub computes the "least upper bound" of the two given types. t1 is
 // allowed to be "SELF_TYPE" (which is the reason for passing cl), but
 // t2 is not.
-func (cs classes) lub(cl, t1, t2 string) string {
+func findLub(cs parser.Classes, cl, t1, t2 string) string {
 	if t1 == t2 {
 		return t1
 	}
@@ -222,7 +220,7 @@ func (cs classes) lub(cl, t1, t2 string) string {
 
 // lte computes whether t1 is "less than or equal to" t2 for the two
 // given types. If t2 is SELF_TYPE, return true only if t1 is too.
-func (cs classes) lte(cl, t1, t2 string) bool {
+func lte(cs parser.Classes, cl, t1, t2 string) bool {
 	if t2 == "SELF_TYPE" {
 		return t1 == "SELF_TYPE"
 	}
@@ -246,25 +244,25 @@ func (cs classes) lte(cl, t1, t2 string) bool {
 // in the symbol table, and then in the attribute definitions of the
 // class and its parents. If it finds the symbol, it returns its type,
 // and true. Otherwise, it returns false.
-func (cs classes) findSymbol(cl string, symbol string, table symbols.Table) (typ string, ok bool) {
+func findSymbol(cs parser.Classes, cl string, symbol string, table symbols.Table) (typ string, ok bool) {
 	if entry, ok := table.Get(symbol); ok {
 		return entry.Type, true
 	}
-	if _, a := cs.findAttr(cl, symbol); a != nil {
+	if _, a := findAttr(cs, cl, symbol); a != nil {
 		return a.Type, true
 	}
 	return "", false
 }
 
 // checkAttribute typechecks an attribute definition. It returns an error boolean.
-func (cs classes) checkAttribute(cl *parser.Class, a *parser.Attr) (err bool) {
+func checkAttribute(cs parser.Classes, cl *parser.Class, a *parser.Attr) (err bool) {
 	if a.Init == nil || a.Init.Op == parser.NoExpr {
 		return false
 	}
 	t_0 := a.Type
 	var t_1 string
-	t_1, err = cs.checkExpression(cl, a.Init, symbols.Table{})
-	if !cs.lte(cl.Name, t_1, t_0) {
+	t_1, err = checkExpression(cs, cl, a.Init, symbols.Table{})
+	if !lte(cs, cl.Name, t_1, t_0) {
 		err = true
 		fmt.Fprintf(os.Stderr, "%s:%d: Initialization expression for %s.%s has type %q, but attribute has declared type %q.\n", cl.Filename, a.Line, cl.Name, a.Name, t_1, t_0)
 	}
@@ -273,15 +271,15 @@ func (cs classes) checkAttribute(cl *parser.Class, a *parser.Attr) (err bool) {
 }
 
 // checkMethod typechecks a method definition.
-func (cs classes) checkMethod(cl *parser.Class, m *parser.Method) (err bool) {
+func checkMethod(cs parser.Classes, cl *parser.Class, m *parser.Method) (err bool) {
 	t_0 := m.Type
 	t := symbols.Table{}
 	for _, f := range m.Formals {
 		t = t.Add(f.Name, f.Type, "")
 	}
 	var tp_0 string
-	tp_0, err = cs.checkExpression(cl, m.Expr, t)
-	if !cs.lte(cl.Name, tp_0, t_0) {
+	tp_0, err = checkExpression(cs, cl, m.Expr, t)
+	if !lte(cs, cl.Name, tp_0, t_0) {
 		err = true
 		fmt.Fprintf(os.Stderr, "%s:%d: Inferred return type %s of method %s does not conform to declared return type %s.\n", cl.Filename, m.Line, tp_0, m.Name, t_0)
 	}
@@ -291,7 +289,7 @@ func (cs classes) checkMethod(cl *parser.Class, m *parser.Method) (err bool) {
 // checkExpression typechecks a single expression within class cl,
 // with symbol table "table". It returns the resulting type of the
 // expression. If there is an error, it returns "Object", true.
-func (cs classes) checkExpression(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+func checkExpression(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	switch e.Op {
 	case parser.IntConst:
 		typ = "Int"
@@ -302,35 +300,35 @@ func (cs classes) checkExpression(cl *parser.Class, e *parser.Expr, table symbol
 	case parser.New:
 		typ = e.InternalType
 	case parser.Let:
-		typ, err = cs.checkLet(cl, e, table)
+		typ, err = checkLet(cs, cl, e, table)
 	case parser.Dispatch:
-		typ, err = cs.checkDispatch(cl, e, table)
+		typ, err = checkDispatch(cs, cl, e, table)
 	case parser.StaticDispatch:
-		typ, err = cs.checkStaticDispatch(cl, e, table)
+		typ, err = checkStaticDispatch(cs, cl, e, table)
 	case parser.Object:
-		typ, err = cs.checkObject(cl, e, table)
+		typ, err = checkObject(cs, cl, e, table)
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
-		typ, err = cs.checkArith(cl, e, table)
+		typ, err = checkArith(cs, cl, e, table)
 	case parser.Lt, parser.Leq:
-		typ, err = cs.checkCompare(cl, e, table)
+		typ, err = checkCompare(cs, cl, e, table)
 	case parser.Comp:
-		typ, err = cs.checkComplement(cl, e, table)
+		typ, err = checkComplement(cs, cl, e, table)
 	case parser.Neg:
-		typ, err = cs.checkNeg(cl, e, table)
+		typ, err = checkNeg(cs, cl, e, table)
 	case parser.Block:
-		typ, err = cs.checkBlock(cl, e, table)
+		typ, err = checkBlock(cs, cl, e, table)
 	case parser.Eq:
-		typ, err = cs.checkEq(cl, e, table)
+		typ, err = checkEq(cs, cl, e, table)
 	case parser.Assign:
-		typ, err = cs.checkAssign(cl, e, table)
+		typ, err = checkAssign(cs, cl, e, table)
 	case parser.Loop:
-		typ, err = cs.checkLoop(cl, e, table)
+		typ, err = checkLoop(cs, cl, e, table)
 	case parser.TypCase:
-		typ, err = cs.checkTypCase(cl, e, table)
+		typ, err = checkTypCase(cs, cl, e, table)
 	case parser.Cond:
-		typ, err = cs.checkCond(cl, e, table)
+		typ, err = checkCond(cs, cl, e, table)
 	case parser.Isvoid:
-		typ, err = cs.checkIsvoid(cl, e, table)
+		typ, err = checkIsvoid(cs, cl, e, table)
 	default:
 		fmt.Fprintf(os.Stderr, "Typechecking not implemented for '%s' expression: %+v\n", e.Op, *e)
 		os.Exit(1)
@@ -345,7 +343,7 @@ func (cs classes) checkExpression(cl *parser.Class, e *parser.Expr, table symbol
 // checkLet typechecks a single let expression within class cl, with
 // symbol table "table". It returns the resulting type of the
 // expression. If there is an error, it returns "Object", true.
-func (cs classes) checkLet(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+func checkLet(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	if e.Text == "self" {
 		fmt.Fprintf(os.Stderr, "%s:%d: 'self' cannot be bound in a 'let' expression.\n", cl.Filename, e.Line)
 		return "Object", true
@@ -354,13 +352,13 @@ func (cs classes) checkLet(cl *parser.Class, e *parser.Expr, table symbols.Table
 	tp_0 := e.InternalType
 	if e.Left.Op != parser.NoExpr {
 		var t_1 string
-		t_1, err = cs.checkExpression(cl, e.Left, table)
-		if !err && !cs.lte(cl.Name, t_1, tp_0) {
+		t_1, err = checkExpression(cs, cl, e.Left, table)
+		if !err && !lte(cs, cl.Name, t_1, tp_0) {
 			err = true
 			fmt.Fprintf(os.Stderr, "%s:%d: Inferred type %s of initialization of %s does not conform to identifier's declared type %s.\n", cl.Filename, e.Line, t_1, e.Text, tp_0)
 		}
 	}
-	t2, err2 := cs.checkExpression(cl, e.Right, table.Add(e.Text, tp_0, ""))
+	t2, err2 := checkExpression(cs, cl, e.Right, table.Add(e.Text, tp_0, ""))
 	if err2 {
 		err = true
 	}
@@ -368,10 +366,10 @@ func (cs classes) checkLet(cl *parser.Class, e *parser.Expr, table symbols.Table
 }
 
 // checkBlock typechecks a block expression.
-func (cs classes) checkBlock(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+func checkBlock(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	typ = "Object"
 	for _, e2 := range e.Exprs {
-		t, e := cs.checkExpression(cl, e2, table)
+		t, e := checkExpression(cs, cl, e2, table)
 		err = err || e
 		if !e {
 			typ = t
@@ -381,12 +379,12 @@ func (cs classes) checkBlock(cl *parser.Class, e *parser.Expr, table symbols.Tab
 }
 
 // checkEq typechecks an equality comparison expression.
-func (cs classes) checkEq(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t_1, err := cs.checkExpression(cl, e.Left, table)
+func checkEq(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t_1, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Bool", err
 	}
-	t_2, err := cs.checkExpression(cl, e.Right, table)
+	t_2, err := checkExpression(cs, cl, e.Right, table)
 	if err {
 		return "Bool", err
 	}
@@ -398,22 +396,22 @@ func (cs classes) checkEq(cl *parser.Class, e *parser.Expr, table symbols.Table)
 }
 
 // checkAssign typechecks an assign expression.
-func (cs classes) checkAssign(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+func checkAssign(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	if e.Text == "self" {
 		fmt.Fprintf(os.Stderr, "%s:%d: Cannot assign to 'self'.\n", cl.Filename, e.Line)
 		return cl.Name, true
 	}
 
-	t, ok := cs.findSymbol(cl.Name, e.Text, table)
+	t, ok := findSymbol(cs, cl.Name, e.Text, table)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "%s:%d: Undeclared identifier %s.\n", cl.Filename, e.Line, e.Text)
 		return "Object", true
 	}
-	tp, err := cs.checkExpression(cl, e.Left, table)
+	tp, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Object", true
 	}
-	if !cs.lte(cl.Name, tp, t) {
+	if !lte(cs, cl.Name, tp, t) {
 		fmt.Fprintf(os.Stderr, "%s:%d: Type %s of assigned expression does not conform to declared type %s of identifier %s.\n", cl.Filename, e.Line, tp, t, e.Text)
 		return "Object", true
 	}
@@ -423,8 +421,8 @@ func (cs classes) checkAssign(cl *parser.Class, e *parser.Expr, table symbols.Ta
 // checkDispatch typechecks a single dispatch expression within class
 // cl, with symbol table "table". It returns the resulting type of the
 // expression. If there is an error, it returns "Object", true.
-func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t_0, err := cs.checkExpression(cl, e.Left, table)
+func checkDispatch(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t_0, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return t_0, err
 	}
@@ -432,7 +430,7 @@ func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.
 	if t_0 == "SELF_TYPE" {
 		tp_0 = cl.Name
 	}
-	_, m := cs.findMethod(tp_0, e.Text)
+	_, m := findMethod(cs, tp_0, e.Text)
 	if m == nil {
 		fmt.Fprintf(os.Stderr, "%s:%d: Dispatch to undefined method %s.\n", cl.Filename, e.Line, e.Text)
 		return "Object", true
@@ -442,11 +440,11 @@ func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.
 		return "Object", true
 	}
 	for i, f := range m.Formals {
-		t_n, e2 := cs.checkExpression(cl, e.Exprs[i], table)
+		t_n, e2 := checkExpression(cs, cl, e.Exprs[i], table)
 		if e2 {
 			err = true
 		} else {
-			if !cs.lte(cl.Name, t_n, f.Type) {
+			if !lte(cs, cl.Name, t_n, f.Type) {
 				err = true
 				fmt.Fprintf(os.Stderr, "%s:%d: In call of method %s, type %s of parameter %s does not conform to declared type %s.\n", cl.Filename, e.Line, m.Name, t_n, f.Name, f.Type)
 			}
@@ -463,16 +461,16 @@ func (cs classes) checkDispatch(cl *parser.Class, e *parser.Expr, table symbols.
 }
 
 // checkStaticDispatch typechecks a static dispatch expression.
-func (cs classes) checkStaticDispatch(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t_0, err := cs.checkExpression(cl, e.Left, table)
+func checkStaticDispatch(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t_0, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return t_0, err
 	}
-	if !cs.lte(cl.Name, t_0, e.InternalType) {
+	if !lte(cs, cl.Name, t_0, e.InternalType) {
 		fmt.Fprintf(os.Stderr, "%s:%d: Expression type %s does not conform to declared static dispatch type %s.\n", cl.Filename, e.Line, t_0, e.InternalType)
 		return "Object", true
 	}
-	_, m := cs.findMethod(e.InternalType, e.Text)
+	_, m := findMethod(cs, e.InternalType, e.Text)
 	if m == nil {
 		fmt.Fprintf(os.Stderr, "%s:%d: Dispatch to undefined method %s.%s.\n", cl.Filename, e.Line, e.InternalType, e.Text)
 		return "Object", true
@@ -482,11 +480,11 @@ func (cs classes) checkStaticDispatch(cl *parser.Class, e *parser.Expr, table sy
 		return "Object", true
 	}
 	for i, f := range m.Formals {
-		t_n, e2 := cs.checkExpression(cl, e.Exprs[i], table)
+		t_n, e2 := checkExpression(cs, cl, e.Exprs[i], table)
 		if e2 {
 			err = true
 		} else {
-			if !cs.lte(cl.Name, t_n, f.Type) {
+			if !lte(cs, cl.Name, t_n, f.Type) {
 				err = true
 				fmt.Fprintf(os.Stderr, "%s:%d: In call of method %s, type %s of parameter %s does not conform to declared type %s.\n", cl.Filename, f.Line, m.Name, t_n, f.Name, f.Type)
 			}
@@ -503,11 +501,11 @@ func (cs classes) checkStaticDispatch(cl *parser.Class, e *parser.Expr, table sy
 }
 
 // checkObject typechecks a single object expression.
-func (cs classes) checkObject(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+func checkObject(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
 	if e.Text == "self" {
 		return "SELF_TYPE", false
 	}
-	t, ok := cs.findSymbol(cl.Name, e.Text, table)
+	t, ok := findSymbol(cs, cl.Name, e.Text, table)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "%s:%d: Undeclared identifier %s.\n", cl.Filename, e.Line, e.Text)
 		return "Object", true
@@ -516,9 +514,9 @@ func (cs classes) checkObject(cl *parser.Class, e *parser.Expr, table symbols.Ta
 }
 
 // checkArith typechecks an arithmetic operator expression.
-func (cs classes) checkArith(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, e1 := cs.checkExpression(cl, e.Left, table)
-	t2, e2 := cs.checkExpression(cl, e.Right, table)
+func checkArith(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, e1 := checkExpression(cs, cl, e.Left, table)
+	t2, e2 := checkExpression(cs, cl, e.Right, table)
 	if e1 || e2 {
 		return "Int", true
 	}
@@ -530,9 +528,9 @@ func (cs classes) checkArith(cl *parser.Class, e *parser.Expr, table symbols.Tab
 }
 
 // checkCompare typechecks a comparison operator expression.
-func (cs classes) checkCompare(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, e1 := cs.checkExpression(cl, e.Left, table)
-	t2, e2 := cs.checkExpression(cl, e.Right, table)
+func checkCompare(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, e1 := checkExpression(cs, cl, e.Left, table)
+	t2, e2 := checkExpression(cs, cl, e.Right, table)
 	if e1 || e2 {
 		return "Bool", true
 	}
@@ -544,8 +542,8 @@ func (cs classes) checkCompare(cl *parser.Class, e *parser.Expr, table symbols.T
 }
 
 // checkComplement typechecks a complement (not) operator expression.
-func (cs classes) checkComplement(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, err := cs.checkExpression(cl, e.Left, table)
+func checkComplement(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Bool", true
 	}
@@ -557,8 +555,8 @@ func (cs classes) checkComplement(cl *parser.Class, e *parser.Expr, table symbol
 }
 
 // checkNeg typechecks a neg (bit flip) operator expression.
-func (cs classes) checkNeg(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, err := cs.checkExpression(cl, e.Left, table)
+func checkNeg(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Int", true
 	}
@@ -570,8 +568,8 @@ func (cs classes) checkNeg(cl *parser.Class, e *parser.Expr, table symbols.Table
 }
 
 // checkLoop typechecks a loop expression.
-func (cs classes) checkLoop(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, err := cs.checkExpression(cl, e.Left, table)
+func checkLoop(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Object", true
 	}
@@ -579,15 +577,15 @@ func (cs classes) checkLoop(cl *parser.Class, e *parser.Expr, table symbols.Tabl
 		fmt.Fprintf(os.Stderr, "%s:%d: Loop condition does not have type Bool.\n", cl.Filename, e.Line)
 		return "Object", true
 	}
-	if _, err := cs.checkExpression(cl, e.Right, table); err {
+	if _, err := checkExpression(cs, cl, e.Right, table); err {
 		return "Object", true
 	}
 	return "Object", false
 }
 
 // checkTypCase typechecks a typcase expression.
-func (cs classes) checkTypCase(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	_, err = cs.checkExpression(cl, e.Left, table)
+func checkTypCase(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	_, err = checkExpression(cs, cl, e.Left, table)
 	typesSeen := make(map[string]bool)
 	lub := ""
 	for _, b := range e.Exprs {
@@ -601,20 +599,20 @@ func (cs classes) checkTypCase(cl *parser.Class, e *parser.Expr, table symbols.T
 		}
 		typesSeen[b.Type] = true
 
-		tp_n, e2 := cs.checkExpression(cl, b.Left, table.Add(b.Text, b.Type, ""))
+		tp_n, e2 := checkExpression(cs, cl, b.Left, table.Add(b.Text, b.Type, ""))
 		err = err || e2
 		if lub == "" {
 			lub = tp_n
 		} else {
-			lub = cs.lub(cl.Name, lub, tp_n)
+			lub = findLub(cs, cl.Name, lub, tp_n)
 		}
 	}
 	return lub, err
 }
 
 // checkCond typechecks a cond expression.
-func (cs classes) checkCond(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	t1, err := cs.checkExpression(cl, e.Left, table)
+func checkCond(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	t1, err := checkExpression(cs, cl, e.Left, table)
 	if err {
 		return "Object", true
 	}
@@ -622,30 +620,30 @@ func (cs classes) checkCond(cl *parser.Class, e *parser.Expr, table symbols.Tabl
 		fmt.Fprintf(os.Stderr, "%s:%d: Cond condition does not have type Bool.\n", cl.Filename, e.Line)
 		return "Object", true
 	}
-	t2, err := cs.checkExpression(cl, e.Right, table)
+	t2, err := checkExpression(cs, cl, e.Right, table)
 	if err {
 		return "Object", true
 	}
-	t3, err := cs.checkExpression(cl, e.Else, table)
+	t3, err := checkExpression(cs, cl, e.Else, table)
 	if err {
 		return "Object", true
 	}
-	return cs.lub(cl.Name, t2, t3), false
+	return findLub(cs, cl.Name, t2, t3), false
 }
 
 // checkIsvoid typechecks an isvoid expression.
-func (cs classes) checkIsvoid(cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
-	_, err = cs.checkExpression(cl, e.Left, table)
+func checkIsvoid(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbols.Table) (typ string, err bool) {
+	_, err = checkExpression(cs, cl, e.Left, table)
 	return "Bool", err
 }
 
 // generateSymbolTables generates symbol tables for class attributes and methods.
-func (cs classes) generateSymbolTables(typ string, children map[string][]string) {
+func generateSymbolTables(cs parser.Classes, typ string, children map[string][]string) {
 	cl := cs[typ]
 	var attrTable symbols.Table
 	var methodTable symbols.Table
 
-	if cl.Parent != "Object" {
+	if cl.Name != "Object" {
 		parent := cs[cl.Parent]
 		attrTable = parent.AttrTable
 		methodTable = parent.MethodTable
@@ -667,15 +665,15 @@ func (cs classes) generateSymbolTables(typ string, children map[string][]string)
 
 	// Generate symbol tables for all children, with this class's table as a starting point.
 	for _, child := range children[typ] {
-		cs.generateSymbolTables(child, children)
+		generateSymbolTables(cs, child, children)
 	}
 }
 
-func Check(program *parser.Program) error {
+func Check(program *parser.Program) (parser.Classes, error) {
 	program.SplitFeatures()
 
 	err := false
-	cs := make(classes)
+	cs := make(parser.Classes)
 	children := map[string][]string{}
 
 	builtins := Builtins()
@@ -725,24 +723,24 @@ func Check(program *parser.Program) error {
 		}
 	}
 
-	cs.traceDepths("Object", children, 1)
+	traceDepths(cs, "Object", children, 1)
 
-	err = err || cs.checkInterfaces()
+	err = err || checkInterfaces(cs)
 
-	cs.generateSymbolTables("Object", children)
+	generateSymbolTables(cs, "Object", children)
 
 	for _, cl := range program.Classes {
 		for _, f := range cl.Features {
 			if f.Attr != nil {
-				err = err || cs.checkAttribute(cl, f.Attr)
+				err = err || checkAttribute(cs, cl, f.Attr)
 			} else {
-				err = err || cs.checkMethod(cl, f.Method)
+				err = err || checkMethod(cs, cl, f.Method)
 			}
 		}
 	}
 
 	if err {
-		return theErr
+		return nil, theErr
 	}
-	return nil
+	return cs, nil
 }
