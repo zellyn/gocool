@@ -36,8 +36,8 @@ func Gen(prog *parser.Program, cs parser.Classes, a asm) {
 	writeBuiltinPrototypes(tags, a)
 	writePrototypes(prog, tags, a)
 	writeDispatchTables(prog, cs, tags, a)
-	inits := generateInits(prog)
-	_ = inits // xyzzy
+	generateInits(prog)
+	writeMethods(prog, cs, tags, a)
 }
 
 // genTags generates an integer tag for each class.
@@ -243,18 +243,53 @@ func writeDispatchTables(prog *parser.Program, cs parser.Classes, tags map[strin
 	}
 }
 
-type attrInit struct {
-	block      *parser.Expr
-	parentInit string
+// writeMethods writes the method definitions out.
+func writeMethods(prog *parser.Program, cs parser.Classes, tags map[string]int, a asm) {
+	a.CommentH1("Method implementations")
+
+	for _, cl := range prog.Classes {
+		a.CommentH2(cl.Name)
+
+		for _, f := range cl.Features {
+			if f.Attr != nil {
+				continue
+			}
+			m := f.Method
+			a.CommentH3(fmt.Sprintf("%s.%s", cl.Name, m.Name))
+			a.Label(fmt.Sprintf("%s.%s", cl.Name, m.Name))
+			if cl.Name == "Main" && m.Name == "_init" {
+				a.Label("Main_init", "Name expected by runtime.")
+			}
+
+			writeMethod(prog, cs, tags, m, a)
+		}
+	}
+}
+
+// writeMethod writes out the implementation of a single method.
+func writeMethod(prog *parser.Program, cs parser.Classes, tags map[string]int, m *parser.Method, a asm) {
+	temps := et(m.Expr)
+	_ = temps
 }
 
 // generateInits generates the init expressions for user-defined classes.
-func generateInits(prog *parser.Program) []attrInit {
-	inits := []attrInit{}
+func generateInits(prog *parser.Program) {
 	for _, cl := range prog.Classes {
 		block := &parser.Expr{
 			Op: parser.Block,
 		}
+		// Start with a call to the parent _init function.
+		block.Exprs = append(block.Exprs, &parser.Expr{
+			Op: parser.StaticDispatch,
+			Left: &parser.Expr{
+				Op:   parser.Object,
+				Text: "self",
+				Type: "SELF_TYPE",
+			},
+			InternalType: cl.Parent,
+			Text:         "_init",
+		})
+
 		for _, f := range cl.Features {
 			if f.Method != nil {
 				continue
@@ -263,15 +298,32 @@ func generateInits(prog *parser.Program) []attrInit {
 				continue
 			}
 			block.Exprs = append(block.Exprs, &parser.Expr{
-			// xyzzy
+				Op:   parser.Assign,
+				Text: f.Attr.Init.Text,
+				Left: f.Attr.Init,
 			})
 		}
-		inits = append(inits, attrInit{
-			block:      block,
-			parentInit: fmt.Sprintf("%s_init", cl.Parent),
+
+		// Return a reference to self, so calling the parent init leaves $a0 unchanged.
+		block.Exprs = append(block.Exprs, &parser.Expr{
+			Op:   parser.Object,
+			Text: "self",
+			Type: "SELF_TYPE",
 		})
+
+		method := &parser.Method{
+			Name: "_init",
+			Type: "SELF_TYPE",
+			Expr: block,
+		}
+
+		if cl.Methods == nil {
+			cl.Methods = make(map[string]*parser.Method)
+		}
+		cl.Methods["_init"] = method
+
+		cl.Features = append([]*parser.Feature{{Method: method}}, cl.Features...)
 	}
-	return inits
 }
 
 // genExpr generates the code for a single expression
@@ -327,41 +379,64 @@ func exprConstants(e *parser.Expr, c *constants) {
 	}
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
+func max(is ...int) int {
+	m := 0
+	for _, i := range is {
+		if i > m {
+			m = i
+		}
 	}
-	return b
+	return m
 }
 
-// exprTemporaries returns a count of the temporaries needed by an
+func maxEt(exprs []*parser.Expr) int {
+	m := 0
+	for _, e := range exprs {
+		m = max(m, et(e))
+	}
+	return m
+}
+
+// et returns a count of the temporaries needed by an
 // expression. Let variables are included.
-func exprTemporaries(e *parser.Expr) int {
+func et(e *parser.Expr) int {
 	switch e.Op {
 	case parser.IntConst, parser.StringConst, parser.BoolConst:
 		return 0
 	case parser.New:
 		return 0
 	case parser.Let:
-		return 1 + max(exprTemporaries(e.Left), exprTemporaries(e.Right))
+		return 1 + max(et(e.Left), et(e.Right))
 	case parser.Object:
 		return 0
 	case parser.Neg:
-		return exprTemporaries(e.Left)
-		// case parser.Dispatch:
-		// case parser.StaticDispatch:
-		// case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
-		// case parser.Lt, parser.Leq:
-		// case parser.Comp:
-		// case parser.Block:
-		// case parser.Eq:
-		// case parser.Assign:
-		// case parser.Loop:
-		// case parser.TypCase:
-		// case parser.Cond:
-		// case parser.Isvoid:
+		return et(e.Left)
+	case parser.Block:
+		return maxEt(e.Exprs)
+	case parser.Dispatch, parser.StaticDispatch:
+		return max(et(e.Left), maxEt(e.Exprs))
+	case parser.Cond:
+		return max(et(e.Left), et(e.Right), et(e.Else))
+	case parser.Eq, parser.Lt, parser.Leq:
+		return max(1+et(e.Left), et(e.Right))
+	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
+		return max(1+et(e.Left), et(e.Right))
+	case parser.Comp:
+		return et(e.Left)
+	case parser.Assign:
+		return et(e.Left)
+	case parser.Isvoid:
+		return et(e.Left)
+	case parser.Loop:
+		return max(et(e.Left), et(e.Right))
+	case parser.TypCase:
+		return max(et(e.Left), maxEt(e.Exprs))
+	case parser.Branch:
+		return 1 + et(e.Left)
+	case parser.NoExpr:
+		return 0
 	}
-	fmt.Fprintf(os.Stderr, "exprTemporaries not implemented for '%s' expression: %+v\n", e.Op, *e)
+	fmt.Fprintf(os.Stderr, "et not implemented for '%s' expression: %+v\n", e.Op, *e)
 	os.Exit(1)
 
 	return 0

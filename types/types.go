@@ -263,7 +263,7 @@ func findSymbol(cs parser.Classes, cl string, symbol string, table symbols.Table
 
 // checkAttribute typechecks an attribute definition. It returns an error boolean.
 func checkAttribute(cs parser.Classes, cl *parser.Class, a *parser.Attr) (err bool) {
-	if a.Init == nil || a.Init.Op == parser.NoExpr {
+	if a.Init.Op == parser.NoExpr {
 		return false
 	}
 	t_0 := a.Type

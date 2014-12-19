@@ -47,7 +47,6 @@ type Method struct {
 	Formals []*Formal
 	Type    string
 	Expr    *Expr
-	table   symbols.Table
 }
 
 type Attr struct {

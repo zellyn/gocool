@@ -57,6 +57,10 @@ func (a asm) CommentH2(s string) (int, error) {
 	return fmt.Fprintf(a, "\n# %s\n", s)
 }
 
+func (a asm) CommentH3(s string) (int, error) {
+	return fmt.Fprintf(a, "\n# %s\n", s)
+}
+
 func (a asm) CommentH1(s string) (int, error) {
 	var b1, b2 int
 	b1, err := fmt.Fprintf(a, "\n#\n")
