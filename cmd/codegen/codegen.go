@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,15 +13,22 @@ import (
 	"github.com/zellyn/gocool/types"
 )
 
+var (
+	useGc  = flag.Bool("usegc", false, "use garbage collection")
+	testGc = flag.Bool("testgc", false, "garbage collect after every allocation")
+)
+
 func main() {
-	if len(os.Args) != 2 {
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 1 {
 		log.Fatalf("Usage: codegen <filename>\n")
 	}
-	contents, err := ioutil.ReadFile(os.Args[1])
+	contents, err := ioutil.ReadFile(args[0])
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, filename := path.Split(os.Args[1])
+	_, filename := path.Split(args[0])
 
 	prog, err := parser.Parse(filename, string(contents))
 	if err != nil {
@@ -34,5 +42,5 @@ func main() {
 	}
 
 	asm := cgen.NewAsm(os.Stdout)
-	cgen.Gen(prog, classes, asm)
+	cgen.Gen(prog, classes, *useGc, *testGc, asm)
 }

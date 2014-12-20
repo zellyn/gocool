@@ -41,6 +41,21 @@ func (a asm) WordS(s string, comment ...string) (int, error) {
 	return fmt.Fprintf(a, "\t.word\t%s\n", s)
 }
 
+func (a asm) Global(s string, comment ...string) (int, error) {
+	if len(comment) > 0 {
+		return fmt.Fprintf(a, "\t.globl\t%s\t# %s\n", s, comment[0])
+	}
+	return fmt.Fprintf(a, "\t.globl\t%s\n", s)
+}
+
+func (a asm) Data() (int, error) {
+	return fmt.Fprintf(a, "\t.data\n")
+}
+
+func (a asm) Text() (int, error) {
+	return fmt.Fprintf(a, "\t.text\n")
+}
+
 func (a asm) Ascii(s string) (int, error) {
 	return fmt.Fprintf(a, "\t.ascii\t%q\n", s)
 }

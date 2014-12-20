@@ -26,16 +26,21 @@ func init() {
 }
 
 // Gen performs codegen for an entire program.
-func Gen(prog *parser.Program, cs parser.Classes, a asm) {
+func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm) {
 	tags := genTags(prog)
 	constants := progConstants(prog)
+	a.Data()
+	writeGCConfig(useGc, testGc, a)
 	writeConstants(constants, tags, a)
 	writeClassnameTable(constants, tags, a)
-	writeBuiltinInits(a)
 	writeBuiltinTags(tags, a)
 	writeBuiltinPrototypes(tags, a)
 	writePrototypes(prog, tags, a)
 	writeDispatchTables(prog, cs, tags, a)
+	writeHeapStart(a)
+
+	a.Text()
+	writeBuiltinInits(a)
 	generateInits(prog)
 	writeMethods(prog, cs, tags, a)
 }
@@ -58,6 +63,32 @@ func genTags(prog *parser.Program) map[string]int {
 		next++
 	}
 	return tags
+}
+
+// writeGCConfig writes out the Garbage Collection configuration
+func writeGCConfig(useGc bool, test bool, a asm) {
+	a.CommentH1("GC Config")
+	a.Global("_MemMgr_INITIALIZER")
+	a.Label("_MemMgr_INITIALIZER")
+	if useGc {
+		a.WordS("_GenGC_Init")
+	} else {
+		a.WordS("_NoGC_Init")
+	}
+	a.Global("_MemMgr_COLLECTOR")
+	a.Label("_MemMgr_COLLECTOR")
+	if useGc {
+		a.WordS("_GenGC_Collect")
+	} else {
+		a.WordS("_NoGC_Collect")
+	}
+	a.Global("_MemMgr_TEST")
+	a.Label("_MemMgr_TEST")
+	if test {
+		a.Word(1)
+	} else {
+		a.Word(0)
+	}
 }
 
 // writeConstants writes out the constant boolean, string, and integer constants.
@@ -144,6 +175,15 @@ func writeClassnameTable(c *constants, tags map[string]int, a asm) {
 	}
 }
 
+// writeHeapStart writes the heap_start label and word. It's not
+// mentioned in the docs, but it's in the grading output, and the
+// runtime expects to find it.
+func writeHeapStart(a asm) {
+	a.Global("heap_start")
+	a.Label("heap_start")
+	a.Word(0)
+}
+
 // writeBuiltinInits writes out the init functions for builtin classes.
 func writeBuiltinInits(a asm) {
 	a.CommentH2("Init functions for builtin types.")
@@ -183,7 +223,7 @@ func writeBuiltinPrototypes(tags map[string]int, a asm) {
 	a.Label("Object_protObj")
 	a.Word(tags["Object"])
 	a.Word(3) // Objects are 3 words long.
-	a.WordS("Obj_dispTab")
+	a.WordS("Object_dispTab")
 
 	a.CommentH2("IO")
 	a.ObjTag()
@@ -268,8 +308,25 @@ func writeMethods(prog *parser.Program, cs parser.Classes, tags map[string]int, 
 
 // writeMethod writes out the implementation of a single method.
 func writeMethod(prog *parser.Program, cs parser.Classes, tags map[string]int, m *parser.Method, a asm) {
-	temps := et(m.Expr)
-	_ = temps
+	temps := et(m.Expr)     // # of temporaries
+	nargs := len(m.Formals) // # of arguments
+	nnew := temps + 3       // # of new stack slots needed (args are already on the stack)
+	nframe := nargs + nnew  // # total frame size
+
+	// Function entry
+	a.Inst("addiu", fmt.Sprintf("$sp $sp -%d", 4*nnew))
+	a.Inst("sw", fmt.Sprintf("$fp %d($sp)", 4*nnew))
+	a.Inst("sw", fmt.Sprintf("$ra %d($sp)", 4*(nnew-1)))
+	a.Inst("sw", fmt.Sprintf("$s0 %d($sp)", 4*(nnew-2)))
+	a.Inst("addiu", "$fp $sp 4")
+	a.Inst("move", "$s0 $a0")
+
+	// Function exit
+	a.Inst("lw", fmt.Sprintf("$s0 %d($sp)", 4*(nnew-2)))
+	a.Inst("lw", fmt.Sprintf("$ra %d($sp)", 4*(nnew-1)))
+	a.Inst("lw", fmt.Sprintf("$fp %d($sp)", 4*nnew))
+	a.Inst("addiu", fmt.Sprintf("$sp $sp %d", 4*(nframe)))
+	a.Inst("jr", "$ra")
 }
 
 // generateInits generates the init expressions for user-defined classes.
@@ -339,6 +396,11 @@ func genExpr(e *parser.Expr, a asm) {
 // string constants mentioned (recursively) in the given program.
 func progConstants(prog *parser.Program) *constants {
 	c := &constants{}
+	c.string("")
+	for _, s := range builtins {
+		c.string(s)
+	}
+
 	for _, cl := range prog.Classes {
 		c.string(cl.Name)
 		c.string(cl.Filename)
