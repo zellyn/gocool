@@ -2,10 +2,12 @@ package cgen
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"sort"
 
 	"github.com/zellyn/gocool/parser"
+	"github.com/zellyn/gocool/symbols"
 )
 
 var builtins = []string{
@@ -25,6 +27,20 @@ func init() {
 	}
 }
 
+type labeler int
+
+func (l *labeler) Next() string {
+	*l++
+	return fmt.Sprintf("label_%d", *l)
+}
+
+type temps int
+
+func (t *temps) Next() string {
+	*t++
+	return fmt.Sprintf(":temp%d", *t)
+}
+
 // Gen performs codegen for an entire program.
 func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm) {
 	tags := genTags(prog)
@@ -42,7 +58,7 @@ func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm
 	a.Text()
 	writeBuiltinInits(a)
 	generateInits(prog)
-	writeMethods(prog, cs, tags, a)
+	writeMethods(prog, cs, constants, tags, a)
 }
 
 // genTags generates an integer tag for each class.
@@ -284,7 +300,10 @@ func writeDispatchTables(prog *parser.Program, cs parser.Classes, tags map[strin
 }
 
 // writeMethods writes the method definitions out.
-func writeMethods(prog *parser.Program, cs parser.Classes, tags map[string]int, a asm) {
+func writeMethods(prog *parser.Program, cs parser.Classes, c *constants, tags map[string]int, a asm) {
+	l := labeler(0)
+	t := temps(0)
+
 	a.CommentH1("Method implementations")
 
 	for _, cl := range prog.Classes {
@@ -301,13 +320,13 @@ func writeMethods(prog *parser.Program, cs parser.Classes, tags map[string]int, 
 				a.Label("Main_init", "Name expected by runtime.")
 			}
 
-			writeMethod(prog, cs, tags, m, a)
+			writeMethod(prog, cs, c, tags, cl, m, &l, &t, a)
 		}
 	}
 }
 
 // writeMethod writes out the implementation of a single method.
-func writeMethod(prog *parser.Program, cs parser.Classes, tags map[string]int, m *parser.Method, a asm) {
+func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, m *parser.Method, l *labeler, t *temps, a asm) {
 	temps := et(m.Expr)     // # of temporaries
 	nargs := len(m.Formals) // # of arguments
 	nnew := temps + 3       // # of new stack slots needed (args are already on the stack)
@@ -321,12 +340,144 @@ func writeMethod(prog *parser.Program, cs parser.Classes, tags map[string]int, m
 	a.Inst("addiu", "$fp $sp 4")
 	a.Inst("move", "$s0 $a0")
 
+	// Create the starting symbol table: the base is class
+	// attributes. Then we add function parameters. After that, we
+	// skip the three stack spaces reserved for fp, ra, s0, and we're
+	// ready for the temporaries.
+	table := cl.AttrTable
+	if table.NextStack != 0 {
+		panic("Unexpected use of stack in attribute symbol table.")
+	}
+	for _, f := range m.Formals {
+		table = table.Add(f.Name, f.Type, "")
+	}
+
+	// Use colons, so nothing in the program could attempt to use
+	// these symbols.
+	table = table.Add(":fp", "Object", "")
+	table = table.Add(":ra", "Object", "")
+	table = table.Add(":s0", "Object", "")
+
+	writeExpr(cs, c, tags, cl, table, nframe, m.Expr, l, t, a)
+
 	// Function exit
 	a.Inst("lw", fmt.Sprintf("$s0 %d($sp)", 4*(nnew-2)))
 	a.Inst("lw", fmt.Sprintf("$ra %d($sp)", 4*(nnew-1)))
 	a.Inst("lw", fmt.Sprintf("$fp %d($sp)", 4*nnew))
 	a.Inst("addiu", fmt.Sprintf("$sp $sp %d", 4*(nframe)))
 	a.Inst("jr", "$ra")
+}
+
+// writeExpr writes out the code for a single expression.
+func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
+	switch e.Op {
+	case parser.Block:
+		for _, e2 := range e.Exprs {
+			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a)
+		}
+	case parser.StaticDispatch:
+		for _, e2 := range e.Exprs {
+			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
+			a.Inst("sw", "$a0 0($sp)")                             // Push it
+			a.Inst("addiu", "$sp $sp -4")                          // Decrement $sp
+		}
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
+		entry, ok := cs[e.InternalType].MethodTable.Get(e.Text)
+		if !ok {
+			log.Panicf("Cannot find %s.%s.", e.InternalType, e.Text)
+		}
+		if entry.Class == "" {
+			log.Panicf("MethodTable entry for %s.%s has no class.", e.InternalType, e.Text)
+		}
+		a.Inst("jal", fmt.Sprintf("%s.%s", entry.Class, e.Text))
+	case parser.Dispatch:
+		for _, e2 := range e.Exprs {
+			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
+			a.Inst("sw", "$a0 0($sp)")                             // Push it
+			a.Inst("addiu", "$sp $sp -4")                          // Decrement $sp
+		}
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
+		typ := e.Left.Type
+		if typ == "SELF_TYPE" {
+			typ = cl.Name
+		}
+		entry, ok := cs[typ].MethodTable.Get(e.Text)
+		if !ok {
+			log.Panicf("Cannot find %s.%s.", typ, e.Text)
+		}
+		if entry.Class == "" {
+			log.Panicf("MethodTable entry for %s.%s has no class.", typ, e.Text)
+		}
+		a.Inst("lw", "$t0 8($a0)")                                  // load dispatch table
+		a.Inst("lw", fmt.Sprintf("$t0 %d($t0)", 4*(1+entry.Index))) // load method address
+		a.Inst("jalr", "$t0")
+	case parser.Object:
+		if e.Text == "self" {
+			a.Inst("move", "$a0 $s0")
+			break
+		}
+		entry, ok := table.Get(e.Text)
+		if !ok {
+			log.Panicf("Unable to find variable named %q", e.Text)
+		}
+		if entry.Class == "" {
+			a.Inst("addiu", fmt.Sprintf("$a0 $fp -%d", 4*(nframe-entry.Index)))
+		} else {
+			// Object attribute is just an offset from self.
+			a.Inst("addiu", fmt.Sprintf("$a0 $s0 %d", 4*(3+entry.Index)))
+		}
+	case parser.Cond:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
+		lFalse := l.Next()
+		lEnd := l.Next()
+		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
+		a.Inst("beq", fmt.Sprintf("$t0 $zero %s", lFalse))
+		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // True branch
+		a.Inst("j", lEnd)
+		a.Label(lFalse)
+		writeExpr(cs, c, tags, cl, table, nframe, e.Else, l, t, a) // False branch
+		a.Label(lEnd)
+	case parser.Eq:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		temp := t.Next()
+		table := table.Add(temp, e.Type, "")
+		index := table.Entries[len(table.Entries)-1].Index
+		frameOffset := 4 * (nframe - index)
+		a.Inst("sw", fmt.Sprintf("$a0 -%d($fp)", frameOffset))
+		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		a.Inst("move", "$t0 $a0")
+		a.Inst("lw", fmt.Sprintf("$t1 -%d($fp)", frameOffset))
+		a.Inst("la", "$a0 bool_True")
+		a.Inst("la", "$a1 bool_False")
+		a.Inst("jal", "equality_test")
+	case parser.IntConst:
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.int(e.Text)))
+	case parser.StringConst:
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)))
+	case parser.BoolConst:
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
+	case parser.Plus, parser.Sub:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		a.Inst("jal", "Object.copy")
+		temp := t.Next()
+		table := table.Add(temp, e.Type, "")
+		index := table.Entries[len(table.Entries)-1].Index
+		frameOffset := 4 * (nframe - index)
+		a.Inst("sw", fmt.Sprintf("$a0 -%d($fp)", frameOffset))
+		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		a.Inst("lw", "$t0 12($a0)")
+		a.Inst("lw", fmt.Sprintf("$t1 -%d($fp)", frameOffset))
+		a.Inst("lw", "$t1 12($t1)")
+		if e.Op == parser.Plus {
+			a.Inst("add", "$t0 $t0 $t1")
+		} else {
+			a.Inst("sub", "$t0 $t0 $t1")
+		}
+		a.Inst("sw", "$t0 12($a0)")
+	default:
+		fmt.Fprintf(os.Stderr, "writeExpr not implemented for '%s' expression: %+v\n", e.Op, *e)
+		os.Exit(1)
+	}
 }
 
 // generateInits generates the init expressions for user-defined classes.
@@ -480,9 +631,9 @@ func et(e *parser.Expr) int {
 	case parser.Cond:
 		return max(et(e.Left), et(e.Right), et(e.Else))
 	case parser.Eq, parser.Lt, parser.Leq:
-		return max(1+et(e.Left), et(e.Right))
+		return max(et(e.Left), 1+et(e.Right))
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
-		return max(1+et(e.Left), et(e.Right))
+		return max(et(e.Left), 1+et(e.Right))
 	case parser.Comp:
 		return et(e.Left)
 	case parser.Assign:
