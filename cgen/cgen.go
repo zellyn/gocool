@@ -333,7 +333,7 @@ func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, tags map
 	nframe := nargs + nnew  // # total frame size
 
 	// Function entry
-	a.Inst("addiu", fmt.Sprintf("$sp $sp -%d", 4*nnew))
+	a.Inst("addiu", fmt.Sprintf("$sp $sp -%d", 4*nnew), fmt.Sprintf("%d args, %d temporaries", nargs, temps))
 	a.Inst("sw", fmt.Sprintf("$fp %d($sp)", 4*nnew))
 	a.Inst("sw", fmt.Sprintf("$ra %d($sp)", 4*(nnew-1)))
 	a.Inst("sw", fmt.Sprintf("$s0 %d($sp)", 4*(nnew-2)))
@@ -413,7 +413,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("jalr", "$t0")
 	case parser.Object:
 		if e.Text == "self" {
-			a.Inst("move", "$a0 $s0")
+			a.Inst("move", "$a0 $s0", "self")
 			break
 		}
 		entry, ok := table.Get(e.Text)
@@ -421,10 +421,10 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			log.Panicf("Unable to find variable named %q", e.Text)
 		}
 		if entry.Class == "" {
-			a.Inst("addiu", fmt.Sprintf("$a0 $fp -%d", 4*(nframe-entry.Index)))
+			a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", 4*(nframe-1-entry.Index)), e.Text)
 		} else {
 			// Object attribute is just an offset from self.
-			a.Inst("addiu", fmt.Sprintf("$a0 $s0 %d", 4*(3+entry.Index)))
+			a.Inst("addiu", fmt.Sprintf("$a0 $s0 %d", 4*(3+entry.Index)), e.Text)
 		}
 	case parser.Cond:
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
@@ -442,11 +442,11 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
-		frameOffset := 4 * (nframe - index)
-		a.Inst("sw", fmt.Sprintf("$a0 -%d($fp)", frameOffset))
+		frameOffset := 4 * (nframe - 1 - index)
+		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
-		a.Inst("move", "$t0 $a0")
-		a.Inst("lw", fmt.Sprintf("$t1 -%d($fp)", frameOffset))
+		a.Inst("move", "$t1 $a0")
+		a.Inst("lw", fmt.Sprintf("$t2 %d($fp)", frameOffset), temp)
 		a.Inst("la", "$a0 bool_True")
 		a.Inst("la", "$a1 bool_False")
 		a.Inst("jal", "equality_test")
@@ -457,17 +457,18 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 	case parser.BoolConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
 	case parser.Plus, parser.Sub:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
-		a.Inst("jal", "Object.copy")
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
-		frameOffset := 4 * (nframe - index)
-		a.Inst("sw", fmt.Sprintf("$a0 -%d($fp)", frameOffset))
+		frameOffset := 4 * (nframe - 1 - index)
+
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		a.Inst("jal", "Object.copy")
+		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		a.Inst("lw", "$t1 12($a0)")
+		a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		a.Inst("lw", "$t0 12($a0)")
-		a.Inst("lw", fmt.Sprintf("$t1 -%d($fp)", frameOffset))
-		a.Inst("lw", "$t1 12($t1)")
 		if e.Op == parser.Plus {
 			a.Inst("add", "$t0 $t0 $t1")
 		} else {
