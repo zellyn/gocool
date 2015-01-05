@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 
 	"github.com/zellyn/gocool/parser"
 	"github.com/zellyn/gocool/symbols"
@@ -48,14 +49,16 @@ func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm
 	a.Data()
 	writeGCConfig(useGc, testGc, a)
 	writeConstants(constants, tags, a)
-	writeClassnameTable(constants, tags, a)
+	writeClassTables(cs, constants, tags, a)
 	writeBuiltinTags(tags, a)
 	writeBuiltinPrototypes(tags, a)
 	writePrototypes(prog, tags, a)
 	writeDispatchTables(prog, cs, tags, a)
 	writeHeapStart(a)
 
+	a.CommentH1("Text segment")
 	a.Text()
+	writeIsa(a)
 	writeBuiltinInits(a)
 	generateInits(prog)
 	writeMethods(prog, cs, constants, tags, a)
@@ -178,8 +181,9 @@ func writeConstants(c *constants, tags map[string]int, a asm) {
 	}
 }
 
-// writeClassnameTable writes out the table of class names.
-func writeClassnameTable(c *constants, tags map[string]int, a asm) {
+// writeClassTables writes out the table of class names, and the table
+// of parent information.
+func writeClassTables(cs parser.Classes, c *constants, tags map[string]int, a asm) {
 	names := make([]string, len(tags))
 	for k, v := range tags {
 		names[v] = k
@@ -188,6 +192,14 @@ func writeClassnameTable(c *constants, tags map[string]int, a asm) {
 	a.Label("class_nameTab")
 	for _, s := range names {
 		a.WordS(c.string(s), s)
+	}
+
+	a.CommentH2("Parent table.")
+	a.Label("class_parentTab")
+	for _, s := range names {
+		cl := cs[s]
+		p := tags[cl.Parent]
+		a.WordS(strconv.Itoa(p), fmt.Sprintf("%s: %s", s, cl.Parent))
 	}
 }
 
@@ -198,6 +210,32 @@ func writeHeapStart(a asm) {
 	a.Global("heap_start")
 	a.Label("heap_start")
 	a.Word(0)
+}
+
+// writeIsa writes out the "isa" function.
+func writeIsa(a asm) {
+	a.CommentH2("isa function: check whether $a0 isa $a1")
+	a.Comment("$a0 is left unmodified.")
+	a.Comment("Result is returned in $a1: 1 if true, 0 if false.")
+	a.Label("isa")
+	a.Inst("beq", "$a1 $zero isa_yes")
+	a.Inst("move", "$t0 $a0")
+	a.Inst("la", "$t1 class_parentTab")
+	a.Label("isa_loop")
+	a.Inst("beq", "$t0 $zero isa_no")
+	a.Inst("beq", "$t0 $a1 isa_yes")
+	a.Inst("sll", "$t0 $t0 2", "*4")
+	a.Inst("addu", "$t0 $t0 $t1")
+	a.Inst("lw", "$t0, 0($t0)", "load parent tag")
+	a.Inst("j", "isa_loop")
+
+	a.Label("isa_yes")
+	a.Inst("li", "$a1 1")
+	a.Inst("jr", "$ra")
+
+	a.Label("isa_no")
+	a.Inst("li", "$a1 0")
+	a.Inst("jr", "$ra")
 }
 
 // writeBuiltinInits writes out the init functions for builtin classes.

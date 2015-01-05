@@ -51,10 +51,10 @@ do
     ./typecheck testdata/typecheck/$i.test > $OUTDIR/$i.test.out 2>&1
     if cmp -s testdata/typecheck/$i.test.out $OUTDIR/$i.test.out
     then
-	succeed
+        succeed
     else
-	[[ " $PASSING " == *" $i "* ]] && unexpectedfail $i
-	fail $i
+        [[ " $PASSING " == *" $i "* ]] && unexpectedfail $i
+        fail $i
     fi
 done
 
@@ -65,10 +65,10 @@ do
     ./typecheck testdata/typecheck/$i.test > $OUTDIR/$i.test.out 2>&1
     if cmp -s testdata/typecheck/$i.test.out $OUTDIR/$i.test.out
     then
-	succeed
+        succeed
     else
-	[[ " $PASSING " == *" $i "* ]] && unexpectedfail $i
-	fail $i
+        [[ " $PASSING " == *" $i "* ]] && unexpectedfail $i
+        fail $i
     fi
 done
 

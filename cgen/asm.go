@@ -65,7 +65,7 @@ func (a asm) WordAlign() (int, error) {
 }
 
 func (a asm) Comment(s string) (int, error) {
-	return fmt.Fprintf(a, "\t# %s\n", s)
+	return fmt.Fprintf(a, "# %s\n", s)
 }
 
 func (a asm) CommentH2(s string) (int, error) {
