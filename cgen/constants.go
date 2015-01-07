@@ -54,7 +54,7 @@ func (c *constants) string(s string) string {
 
 func (c *constants) bool(s string) string {
 	if strings.ToLower(s) == "false" {
-		return "bool_false"
+		return "bool_False"
 	}
-	return "bool_true"
+	return "bool_True"
 }

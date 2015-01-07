@@ -194,10 +194,10 @@ func checkInterfaces(cs parser.Classes) (hasErr bool) {
 	return hasErr
 }
 
-// lub computes the "least upper bound" of the two given types. t1 is
+// Lub computes the "least upper bound" of the two given types. t1 is
 // allowed to be "SELF_TYPE" (which is the reason for passing cl), but
 // t2 is not.
-func findLub(cs parser.Classes, cl, t1, t2 string) string {
+func Lub(cs parser.Classes, cl, t1, t2 string) string {
 	if t1 == t2 {
 		return t1
 	}
@@ -611,7 +611,7 @@ func checkTypCase(cs parser.Classes, cl *parser.Class, e *parser.Expr, table sym
 		if lub == "" {
 			lub = tp_n
 		} else {
-			lub = findLub(cs, cl.Name, lub, tp_n)
+			lub = Lub(cs, cl.Name, lub, tp_n)
 		}
 	}
 	return lub, err
@@ -635,7 +635,7 @@ func checkCond(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symbol
 	if err {
 		return "Object", true
 	}
-	return findLub(cs, cl.Name, t2, t3), false
+	return Lub(cs, cl.Name, t2, t3), false
 }
 
 // checkIsvoid typechecks an isvoid expression.

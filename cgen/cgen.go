@@ -215,11 +215,12 @@ func writeHeapStart(a asm) {
 // writeIsa writes out the "isa" function.
 func writeIsa(a asm) {
 	a.CommentH2("isa function: check whether $a0 isa $a1")
+	a.Comment("$a0 is pointer to object, $a1 is type tag.")
 	a.Comment("$a0 is left unmodified.")
 	a.Comment("Result is returned in $a1: 1 if true, 0 if false.")
 	a.Label("isa")
 	a.Inst("beq", "$a1 $zero isa_yes")
-	a.Inst("move", "$t0 $a0")
+	a.Inst("lw", "$t0 0($a0)", "obj_tag")
 	a.Inst("la", "$t1 class_parentTab")
 	a.Label("isa_loop")
 	a.Inst("beq", "$t0 $zero isa_no")
@@ -309,7 +310,7 @@ func writePrototypes(prog *parser.Program, tags map[string]int, a asm) {
 			case "String":
 				value = "String_protObj"
 			}
-			a.WordS(value, e.Type)
+			a.WordS(value, fmt.Sprintf("%s (%s)", e.Name, e.Type))
 		}
 	}
 }
@@ -406,6 +407,22 @@ func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, tags map
 	a.Inst("jr", "$ra")
 }
 
+// isa returns true if a isa subclass of b
+func isa(cs parser.Classes, a, b string) bool {
+	if b == "Object" {
+		return true
+	}
+	for {
+		if a == "Object" {
+			return false
+		}
+		if a == b {
+			return true
+		}
+		a = cs[a].Parent
+	}
+}
+
 // writeExpr writes out the code for a single expression.
 func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
 	switch e.Op {
@@ -435,6 +452,15 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("addiu", "$sp $sp -4")                          // Decrement $sp
 		}
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
+
+		// Check for void.
+		overVoid := l.Next()
+		a.Inst("bne", fmt.Sprintf("$a0 $zero %s", overVoid))
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)))
+		a.Inst("li", fmt.Sprintf("$t1 %d", e.Line))
+		a.Inst("j", "_dispatch_abort")
+		a.Label(overVoid)
+
 		typ := e.Left.Type
 		if typ == "SELF_TYPE" {
 			typ = cl.Name
@@ -462,7 +488,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", 4*(nframe-1-entry.Index)), e.Text)
 		} else {
 			// Object attribute is just an offset from self.
-			a.Inst("addiu", fmt.Sprintf("$a0 $s0 %d", 4*(3+entry.Index)), e.Text)
+			a.Inst("lw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
 		}
 	case parser.Cond:
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
@@ -513,10 +539,109 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("sub", "$t0 $t0 $t1")
 		}
 		a.Inst("sw", "$t0 12($a0)")
+	case parser.TypCase:
+		writeTypCase(cs, c, tags, cl, table, nframe, e, l, t, a)
+	case parser.Let:
+		typ := e.InternalType
+		if typ == "SELF_TYPE" {
+			typ = cl.Name
+		}
+		tmpTable := table.Add(e.Text, typ, "")
+		index := tmpTable.Entries[len(tmpTable.Entries)-1].Index
+		frameOffset := 4 * (nframe - 1 - index)
+
+		if e.Left.Op == parser.NoExpr {
+			switch typ {
+			case "Int":
+				a.Inst("la", "$t0 Int_protObj")
+			case "Bool":
+				a.Inst("la", "$t0 Bool_protObj")
+			case "String":
+				a.Inst("la", "$t0 String_protObj")
+			default:
+				a.Inst("li", "$t0 0")
+			}
+			a.Inst("sw", fmt.Sprintf("$t0 %d($fp)", frameOffset), "default value")
+		} else {
+			writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // calculate intial value
+			a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "default value")
+		}
+		writeExpr(cs, c, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
+
+	case parser.Assign:
+		fallthrough
+	case parser.Loop:
+		fallthrough
+	case parser.New:
+		fallthrough
+	case parser.Isvoid:
+		fallthrough
+	case parser.Comp:
+		fallthrough
+	case parser.Mul, parser.Divide:
+		fallthrough
+	case parser.Neg:
+		fallthrough
+	case parser.Lt, parser.Leq:
+		fallthrough
 	default:
 		fmt.Fprintf(os.Stderr, "writeExpr not implemented for '%s' expression: %+v\n", e.Op, *e)
 		os.Exit(1)
 	}
+}
+
+//writeTypCase writes out the assembly for a case expression.
+func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
+
+	typ := e.Type
+	if typ == "SELF_TYPE" {
+		typ = cl.Name
+	}
+
+	// Figure out whether we need a fall-through check.
+	canFallThrough := true
+	for _, e2 := range e.Exprs {
+		if isa(cs, typ, e2.Type) {
+			canFallThrough = false
+			break
+		}
+	}
+	_ = canFallThrough
+
+	// Calculate the expression to be cased on.
+	writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate expression to case on.
+
+	// Find the next slot, and store $a0 there. Use a temporary table,
+	// because the slot might be named differently in each branch.
+	tmpTable := table.Add("unused", "Object", "")
+	index := tmpTable.Entries[len(tmpTable.Entries)-1].Index
+	frameOffset := 4 * (nframe - 1 - index)
+	a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "cased-on value")
+
+	overVoid := l.Next()
+	a.Inst("bne", fmt.Sprintf("$a0 $zero %s", overVoid))
+	a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)))
+	a.Inst("li", fmt.Sprintf("$t1 %d", e.Line))
+	a.Inst("j", "_case_abort2")
+	a.Label(overVoid)
+
+	over := l.Next()
+
+	for _, e2 := range e.Exprs {
+		skip := l.Next()
+		tag := tags[e2.Type]
+		a.Comment(fmt.Sprintf("%s:%s", e2.Text, e2.Type))
+		a.Inst("li", fmt.Sprintf("$a1 %d", tag))
+		a.Inst("jal", "isa")
+		a.Inst("beq", fmt.Sprintf("$a1 $zero %s", skip))
+		writeExpr(cs, c, tags, cl, table.Add(e2.Text, e2.Type, ""), nframe, e2.Left, l, t, a)
+		a.Inst("j", over)
+		a.Label(skip)
+	}
+
+	a.Inst("j", "_case_abort")
+
+	a.Label(over)
 }
 
 // generateInits generates the init expressions for user-defined classes.
