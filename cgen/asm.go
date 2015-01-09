@@ -56,8 +56,18 @@ func (a asm) Text() (int, error) {
 	return fmt.Fprintf(a, "\t.text\n")
 }
 
-func (a asm) Ascii(s string) (int, error) {
-	return fmt.Fprintf(a, "\t.ascii\t%q\n", s)
+func (a asm) AsciiZ(s string) (int, error) {
+	if s == "" || s[len(s)-1] != '\\' {
+		return fmt.Fprintf(a, "\t.asciiz\t%q\n", s)
+	}
+	slashes := "\t.byte\t"
+	for s != "" && s[len(s)-1] == '\\' {
+		slashes = slashes + "0x5C, "
+		s = s[:len(s)-1]
+	}
+	slashes = slashes + "0x00"
+
+	return fmt.Fprintf(a, "\t.ascii\t%q\n%s\n", s, slashes)
 }
 
 func (a asm) WordAlign() (int, error) {
