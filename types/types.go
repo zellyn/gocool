@@ -3,6 +3,7 @@ package types
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/zellyn/gocool/parser"
@@ -32,12 +33,12 @@ var noInherit = map[string]bool{
 // traceDepths traces out the tree of objects, starting at Object, and
 // assigning a depth (Object=1, its children 2, etc.). Any object that
 // lacks a depth must have an undefined parent, or a cycle.
-func traceDepths(cs parser.Classes, typ string, children map[string][]string, depth int) {
+func traceDepths(cs parser.Classes, cl *parser.Class, depth int) {
 	// fmt.Printf("%s: %v\n", typ, children[typ])
-	for _, childName := range children[typ] {
+	for _, childName := range cl.Children {
 		child := cs[childName]
 		child.Depth = depth
-		traceDepths(cs, child.Name, children, depth+1)
+		traceDepths(cs, child, depth+1)
 	}
 }
 
@@ -645,8 +646,7 @@ func checkIsvoid(cs parser.Classes, cl *parser.Class, e *parser.Expr, table symb
 }
 
 // generateSymbolTables generates symbol tables for class attributes and methods.
-func generateSymbolTables(cs parser.Classes, typ string, children map[string][]string) {
-	cl := cs[typ]
+func generateSymbolTables(cs parser.Classes, cl *parser.Class) {
 	var attrTable symbols.Table
 	var methodTable symbols.Table
 
@@ -676,8 +676,8 @@ func generateSymbolTables(cs parser.Classes, typ string, children map[string][]s
 	cl.MethodTable = methodTable
 
 	// Generate symbol tables for all children, with this class's table as a starting point.
-	for _, child := range children[typ] {
-		generateSymbolTables(cs, child, children)
+	for _, child := range cl.Children {
+		generateSymbolTables(cs, cs[child])
 	}
 }
 
@@ -686,15 +686,24 @@ func Check(program *parser.Program) (parser.Classes, error) {
 
 	err := false
 	cs := make(parser.Classes)
-	children := map[string][]string{}
+	allCs := make(parser.Classes) // For parent lookups.
 
 	builtins := Builtins()
 
 	for _, cl := range builtins {
 		cs[cl.Name] = cl
+		allCs[cl.Name] = cl
 		if cl.Name != "Object" {
-			children[cl.Parent] = append(children[cl.Parent], cl.Name)
+			parent, ok := cs[cl.Parent]
+			if !ok {
+				log.Fatalf("Parent %q not found.", cl.Parent)
+			}
+			parent.Children = append(parent.Children, cl.Name)
 		}
+	}
+
+	for _, cl := range program.Classes {
+		allCs[cl.Name] = cl
 	}
 
 	for _, cl := range program.Classes {
@@ -716,7 +725,11 @@ func Check(program *parser.Program) (parser.Classes, error) {
 		}
 		if !errHere {
 			cs[cl.Name] = cl
-			children[cl.Parent] = append(children[cl.Parent], cl.Name)
+			parent, ok := allCs[cl.Parent]
+			if !ok {
+				log.Fatalf("Parent %q not found.", cl.Parent)
+			}
+			parent.Children = append(parent.Children, cl.Name)
 		}
 	}
 
@@ -735,11 +748,11 @@ func Check(program *parser.Program) (parser.Classes, error) {
 		}
 	}
 
-	traceDepths(cs, "Object", children, 1)
+	traceDepths(cs, cs["Object"], 1)
 
 	err = err || checkInterfaces(cs)
 
-	generateSymbolTables(cs, "Object", children)
+	generateSymbolTables(cs, cs["Object"])
 
 	for _, cl := range program.Classes {
 		for _, f := range cl.Features {

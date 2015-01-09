@@ -33,6 +33,7 @@ type Class struct {
 	Depth       int
 	AttrTable   symbols.Table
 	MethodTable symbols.Table
+	Children    []string
 }
 
 type Feature struct {
