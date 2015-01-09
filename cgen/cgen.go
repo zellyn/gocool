@@ -432,6 +432,7 @@ func isa(cs parser.Classes, a, b string) bool {
 
 // writeExpr writes out the code for a single expression.
 func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
+	a.Comment(fmt.Sprintf("line %d", e.Line))
 	switch e.Op {
 	case parser.Block:
 		for _, e2 := range e.Exprs {
@@ -575,10 +576,10 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			default:
 				a.Inst("li", "$t0 0")
 			}
-			a.Inst("sw", fmt.Sprintf("$t0 %d($fp)", frameOffset), "default value")
+			a.Inst("sw", fmt.Sprintf("$t0 %d($fp)", frameOffset), "default value for "+e.Text)
 		} else {
 			writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // calculate intial value
-			a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "default value")
+			a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "calculated value for "+e.Text)
 		}
 		writeExpr(cs, c, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
 
@@ -658,6 +659,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("neg", "$t0 $t0")
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.Comp:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		// Hehe. This is evil.
 		a.Inst("la", "$t0 bool_True")
 		a.Inst("la", "$t1 bool_False")
