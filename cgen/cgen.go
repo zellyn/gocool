@@ -44,7 +44,7 @@ func (t *temps) Next() string {
 
 // Gen performs codegen for an entire program.
 func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm) {
-	tags := genTags(prog)
+	tags := genTags(cs)
 	constants := progConstants(prog)
 	a.Data()
 	writeGCConfig(useGc, testGc, a)
@@ -64,8 +64,9 @@ func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm
 	writeMethods(prog, cs, constants, tags, a)
 }
 
-// genTags generates an integer tag for each class.
-func genTags(prog *parser.Program) map[string]int {
+// genTags generates an integer tag for each class. Children will
+// always have higher tag numbers than their parents.
+func genTags(cs parser.Classes) map[string]int {
 	tags := map[string]int{
 		"Object": 0,
 		"Int":    1,
@@ -74,13 +75,20 @@ func genTags(prog *parser.Program) map[string]int {
 		"IO":     4,
 	}
 	next := 5
-	for _, cl := range prog.Classes {
-		if _, ok := tags[cl.Name]; ok {
-			continue
+
+	var traverse func(cl *parser.Class)
+	traverse = func(cl *parser.Class) {
+		if tags[cl.Name] == 0 && cl.Name != "Object" {
+			tags[cl.Name] = next
+			next++
 		}
-		tags[cl.Name] = next
-		next++
+		for _, child := range cl.Children {
+			traverse(cs[child])
+		}
 	}
+
+	traverse(cs["Object"])
+
 	return tags
 }
 
@@ -584,6 +592,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a)
 		a.Inst("j", top)
 		a.Label(over)
+		a.Inst("move", "$a0 $zero") // Make sure loop value is void.
 	case parser.Assign:
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
 		entry, ok := table.Get(e.Text)
@@ -667,23 +676,18 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 	}
 }
 
-//writeTypCase writes out the assembly for a case expression.
+// writeTypCase writes out the assembly for a case expression.
 func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
 
-	typ := e.Type
-	if typ == "SELF_TYPE" {
-		typ = cl.Name
-	}
-
-	// Figure out whether we need a fall-through check.
-	canFallThrough := true
+	// We need case tags most-specific first, so sort by descending tag.
+	byTag := make(map[int]*parser.Expr, len(e.Exprs))
+	caseTags := make([]int, 0, len(e.Exprs))
 	for _, e2 := range e.Exprs {
-		if isa(cs, typ, e2.Type) {
-			canFallThrough = false
-			break
-		}
+		tag := tags[e2.Type]
+		caseTags = append(caseTags, tag)
+		byTag[tag] = e2
 	}
-	_ = canFallThrough
+	sort.Sort(sort.Reverse(sort.IntSlice(caseTags)))
 
 	// Calculate the expression to be cased on.
 	writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate expression to case on.
@@ -704,9 +708,9 @@ func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *pars
 
 	over := l.Next()
 
-	for _, e2 := range e.Exprs {
+	for _, tag := range caseTags {
+		e2 := byTag[tag]
 		skip := l.Next()
-		tag := tags[e2.Type]
 		a.Comment(fmt.Sprintf("%s:%s", e2.Text, e2.Type))
 		a.Inst("li", fmt.Sprintf("$a1 %d", tag))
 		a.Inst("jal", "isa")
