@@ -29,15 +29,18 @@ func (t Table) Get(name string) (Entry, bool) {
 }
 
 func (t Table) Add(name string, typ string, class string) Table {
+	// Defensively copy, so we don't accidentally overwrite.
+	entries := make([]Entry, len(t.Entries), len(t.Entries)+1)
+	copy(entries, t.Entries)
 	if class == "" {
 		return Table{
-			Entries:     append(t.Entries, Entry{name, typ, class, t.NextStack}),
+			Entries:     append(entries, Entry{name, typ, class, t.NextStack}),
 			NextStack:   t.NextStack + 1,
 			NextFeature: t.NextFeature,
 		}
 	}
 	return Table{
-		Entries:     append(t.Entries, Entry{name, typ, class, t.NextFeature}),
+		Entries:     append(entries, Entry{name, typ, class, t.NextFeature}),
 		NextStack:   t.NextStack,
 		NextFeature: t.NextFeature + 1,
 	}
@@ -93,8 +96,12 @@ func (t Table) Append(t2 Table) Table {
 		nextFeature = t2.NextFeature
 	}
 
+	entries := make([]Entry, len(t.Entries)+len(t2.Entries))
+	copy(entries, t.Entries)
+	copy(entries[len(t.Entries):], t2.Entries)
+
 	return Table{
-		Entries:     append(t.Entries, t2.Entries...),
+		Entries:     entries,
 		NextStack:   nextStack,
 		NextFeature: nextFeature,
 	}

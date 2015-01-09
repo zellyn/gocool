@@ -175,8 +175,7 @@ func writeConstants(c *constants, tags map[string]int, a asm) {
 		a.Word(wordlen) // Strings are 4 words long, plus nul-terminated, padded string.
 		a.WordS("String_dispTab")
 		a.WordS(c.formatInt(len(s))) // length of the string
-		a.Ascii(s)
-		a.Word(0)
+		a.AsciiZ(s)
 		a.WordAlign()
 	}
 }
@@ -482,7 +481,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		}
 		entry, ok := table.Get(e.Text)
 		if !ok {
-			log.Panicf("Unable to find variable named %q", e.Text)
+			log.Panicf("Unable to find object reference %q. Symbol table: %+v", e.Text, table)
 		}
 		if entry.Class == "" {
 			a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", 4*(nframe-1-entry.Index)), e.Text)
@@ -520,7 +519,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)))
 	case parser.BoolConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
-	case parser.Plus, parser.Sub:
+	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
@@ -533,10 +532,17 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("lw", "$t1 12($a0)")
 		a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		a.Inst("lw", "$t0 12($a0)")
-		if e.Op == parser.Plus {
+		switch e.Op {
+		case parser.Plus:
 			a.Inst("add", "$t0 $t0 $t1")
-		} else {
+		case parser.Sub:
 			a.Inst("sub", "$t0 $t0 $t1")
+		case parser.Mul:
+			a.Inst("mul", "$t0 $t0 $t1")
+		case parser.Divide:
+			a.Inst("div", "$t0 $t0 $t1")
+		default:
+			log.Panicf("Unknown Op: %v", e.Op)
 		}
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.TypCase:
@@ -568,22 +574,93 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		}
 		writeExpr(cs, c, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
 
-	case parser.Assign:
-		fallthrough
 	case parser.Loop:
-		fallthrough
-	case parser.New:
-		fallthrough
-	case parser.Isvoid:
-		fallthrough
-	case parser.Comp:
-		fallthrough
-	case parser.Mul, parser.Divide:
-		fallthrough
-	case parser.Neg:
-		fallthrough
+		top := l.Next()
+		over := l.Next()
+		a.Label(top)
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
+		a.Inst("la", "$t0 bool_True")
+		a.Inst("bne", fmt.Sprintf("$a0 $t0 %s", over))
+		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a)
+		a.Inst("j", top)
+		a.Label(over)
+	case parser.Assign:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
+		entry, ok := table.Get(e.Text)
+		if !ok {
+			log.Panicf("Unable to find variable named %q to assign to", e.Text)
+		}
+		if entry.Class == "" {
+			a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", 4*(nframe-1-entry.Index)), e.Text)
+		} else {
+			// Object attribute is just an offset from self.
+			a.Inst("sw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
+		}
 	case parser.Lt, parser.Leq:
-		fallthrough
+		temp := t.Next()
+		table := table.Add(temp, e.Type, "")
+		index := table.Entries[len(table.Entries)-1].Index
+		frameOffset := 4 * (nframe - 1 - index)
+
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
+		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		a.Inst("lw", "$t1 12($a0)")
+		a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
+		a.Inst("lw", "$t0 12($a0)")
+		a.Inst("la", "$a0 bool_True")
+		yep := l.Next()
+		switch e.Op {
+		case parser.Lt:
+			a.Inst("slt", "$t0 $t0 $t1")
+		case parser.Leq:
+			a.Inst("sle", "$t0 $t0 $t1")
+		default:
+			panic("unexpected op")
+		}
+		a.Inst("bne", fmt.Sprintf("$t0 $zero %s", yep))
+		a.Inst("la", "$a0 bool_False")
+		a.Label(yep)
+	case parser.New:
+		// Create the new object
+		if e.InternalType != "SELF_TYPE" {
+			a.Inst("la", fmt.Sprintf("$a0 %s_protObj", e.InternalType))
+		} else {
+			// SELF_TYPE: use prototype-object pointer at start of self's dispatch table.
+			a.Inst("la", "$a0 8($s0)")
+		}
+		a.Inst("jal", "Object.copy")
+
+		// Call init function.
+		entry, ok := cs["Object"].MethodTable.Get("_init")
+		if !ok {
+			log.Panicf("Cannot find Object._init.")
+		}
+		if entry.Class == "" {
+			log.Panicf("MethodTable entry for Object._init has no class.")
+		}
+		a.Inst("lw", "$t0 8($a0)")                                  // load dispatch table
+		a.Inst("lw", fmt.Sprintf("$t0 %d($t0)", 4*(1+entry.Index))) // load method address
+		a.Inst("jalr", "$t0")
+	case parser.Neg:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		a.Inst("jal", "Object.copy")
+		a.Inst("lw", "$t0 12($a0)")
+		a.Inst("neg", "$t0 $t0")
+		a.Inst("sw", "$t0 12($a0)")
+	case parser.Comp:
+		// Hehe. This is evil.
+		a.Inst("la", "$t0 bool_True")
+		a.Inst("la", "$t1 bool_False")
+		a.Inst("xor", "$t0 $t0 $t1")
+		a.Inst("xor", "$a0 $a0 $t0")
+	case parser.Isvoid:
+		isVoid := l.Next()
+		a.Inst("la", "$t0 bool_True")
+		a.Inst("beq", fmt.Sprintf("$a0 $zero %s", isVoid))
+		a.Inst("la", "$t0 bool_False")
+		a.Label(isVoid)
+		a.Inst("move", "$a0 $t0")
 	default:
 		fmt.Fprintf(os.Stderr, "writeExpr not implemented for '%s' expression: %+v\n", e.Op, *e)
 		os.Exit(1)
@@ -671,7 +748,7 @@ func generateInits(prog *parser.Program) {
 			}
 			block.Exprs = append(block.Exprs, &parser.Expr{
 				Op:   parser.Assign,
-				Text: f.Attr.Init.Text,
+				Text: f.Attr.Name,
 				Left: f.Attr.Init,
 			})
 		}
