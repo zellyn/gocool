@@ -76,13 +76,13 @@ var yyToknames = []string{
 	"THEN",
 	"TYPEID",
 	"WHILE",
-	" +",
-	" -",
-	" *",
-	" /",
-	" ~",
-	" @",
-	" .",
+	"'+'",
+	"'-'",
+	"'*'",
+	"'/'",
+	"'~'",
+	"'@'",
+	"'.'",
 }
 var yyStatenames = []string{}
 

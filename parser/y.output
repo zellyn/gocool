@@ -35,16 +35,16 @@ state 3
 
 
 state 4
-	class:  CLASS.TYPEID inherits { features } ; 
+	class:  CLASS.TYPEID inherits '{' features '}' ';' 
 
 	TYPEID  shift 7
 	.  error
 
 
 state 5
-	class:  error.; 
+	class:  error.';' 
 
-	;  shift 8
+	';'  shift 8
 	.  error
 
 
@@ -55,7 +55,7 @@ state 6
 
 
 state 7
-	class:  CLASS TYPEID.inherits { features } ; 
+	class:  CLASS TYPEID.inherits '{' features '}' ';' 
 	inherits: .    (6)
 
 	INHERITS  shift 10
@@ -64,15 +64,15 @@ state 7
 	inherits  goto 9
 
 state 8
-	class:  error ;.    (5)
+	class:  error ';'.    (5)
 
 	.  reduce 5 (src line 108)
 
 
 state 9
-	class:  CLASS TYPEID inherits.{ features } ; 
+	class:  CLASS TYPEID inherits.'{' features '}' ';' 
 
-	{  shift 11
+	'{'  shift 11
 	.  error
 
 
@@ -84,12 +84,12 @@ state 10
 
 
 state 11
-	class:  CLASS TYPEID inherits {.features } ; 
+	class:  CLASS TYPEID inherits '{'.features '}' ';' 
 	features: .    (8)
 
 	error  shift 14
 	OBJECTID  reduce 8 (src line 119)
-	}  reduce 8 (src line 119)
+	'}'  reduce 8 (src line 119)
 	.  error
 
 	features  goto 13
@@ -101,26 +101,26 @@ state 12
 
 
 state 13
-	class:  CLASS TYPEID inherits { features.} ; 
+	class:  CLASS TYPEID inherits '{' features.'}' ';' 
 	features:  features.feature 
 
 	OBJECTID  shift 17
-	}  shift 15
+	'}'  shift 15
 	.  error
 
 	feature  goto 16
 
 state 14
-	features:  error.; 
+	features:  error.';' 
 
-	;  shift 18
+	';'  shift 18
 	.  error
 
 
 state 15
-	class:  CLASS TYPEID inherits { features }.; 
+	class:  CLASS TYPEID inherits '{' features '}'.';' 
 
-	;  shift 19
+	';'  shift 19
 	.  error
 
 
@@ -131,32 +131,32 @@ state 16
 
 
 state 17
-	feature:  OBJECTID.( formals ) : TYPEID { expr } ; 
-	feature:  OBJECTID.: TYPEID maybeassign ; 
-	feature:  OBJECTID.( formals ) : TYPEID { error } 
-	feature:  OBJECTID.( formals error ) : TYPEID { expr } 
+	feature:  OBJECTID.'(' formals ')' ':' TYPEID '{' expr '}' ';' 
+	feature:  OBJECTID.':' TYPEID maybeassign ';' 
+	feature:  OBJECTID.'(' formals ')' ':' TYPEID '{' error '}' 
+	feature:  OBJECTID.'(' formals error ')' ':' TYPEID '{' expr '}' 
 
-	(  shift 20
-	:  shift 21
+	'('  shift 20
+	':'  shift 21
 	.  error
 
 
 state 18
-	features:  error ;.    (10)
+	features:  error ';'.    (10)
 
 	.  reduce 10 (src line 127)
 
 
 state 19
-	class:  CLASS TYPEID inherits { features } ;.    (4)
+	class:  CLASS TYPEID inherits '{' features '}' ';'.    (4)
 
 	.  reduce 4 (src line 105)
 
 
 state 20
-	feature:  OBJECTID (.formals ) : TYPEID { expr } ; 
-	feature:  OBJECTID (.formals ) : TYPEID { error } 
-	feature:  OBJECTID (.formals error ) : TYPEID { expr } 
+	feature:  OBJECTID '('.formals ')' ':' TYPEID '{' expr '}' ';' 
+	feature:  OBJECTID '('.formals ')' ':' TYPEID '{' error '}' 
+	feature:  OBJECTID '('.formals error ')' ':' TYPEID '{' expr '}' 
 	formals: .    (17)
 
 	OBJECTID  shift 24
@@ -166,19 +166,19 @@ state 20
 	formal  goto 23
 
 state 21
-	feature:  OBJECTID :.TYPEID maybeassign ; 
+	feature:  OBJECTID ':'.TYPEID maybeassign ';' 
 
 	TYPEID  shift 25
 	.  error
 
 
 state 22
-	feature:  OBJECTID ( formals.) : TYPEID { expr } ; 
-	feature:  OBJECTID ( formals.) : TYPEID { error } 
-	feature:  OBJECTID ( formals.error ) : TYPEID { expr } 
+	feature:  OBJECTID '(' formals.')' ':' TYPEID '{' expr '}' ';' 
+	feature:  OBJECTID '(' formals.')' ':' TYPEID '{' error '}' 
+	feature:  OBJECTID '(' formals.error ')' ':' TYPEID '{' expr '}' 
 
 	error  shift 27
-	)  shift 26
+	')'  shift 26
 	.  error
 
 
@@ -191,14 +191,14 @@ state 23
 	commaformals  goto 28
 
 state 24
-	formal:  OBJECTID.: TYPEID 
+	formal:  OBJECTID.':' TYPEID 
 
-	:  shift 29
+	':'  shift 29
 	.  error
 
 
 state 25
-	feature:  OBJECTID : TYPEID.maybeassign ; 
+	feature:  OBJECTID ':' TYPEID.maybeassign ';' 
 	maybeassign: .    (15)
 
 	ASSIGN  shift 31
@@ -207,39 +207,39 @@ state 25
 	maybeassign  goto 30
 
 state 26
-	feature:  OBJECTID ( formals ).: TYPEID { expr } ; 
-	feature:  OBJECTID ( formals ).: TYPEID { error } 
+	feature:  OBJECTID '(' formals ')'.':' TYPEID '{' expr '}' ';' 
+	feature:  OBJECTID '(' formals ')'.':' TYPEID '{' error '}' 
 
-	:  shift 32
+	':'  shift 32
 	.  error
 
 
 state 27
-	feature:  OBJECTID ( formals error.) : TYPEID { expr } 
+	feature:  OBJECTID '(' formals error.')' ':' TYPEID '{' expr '}' 
 
-	)  shift 33
+	')'  shift 33
 	.  error
 
 
 state 28
 	formals:  formal commaformals.    (18)
-	commaformals:  commaformals., formal 
+	commaformals:  commaformals.',' formal 
 
-	,  shift 34
+	','  shift 34
 	.  reduce 18 (src line 152)
 
 
 state 29
-	formal:  OBJECTID :.TYPEID 
+	formal:  OBJECTID ':'.TYPEID 
 
 	TYPEID  shift 35
 	.  error
 
 
 state 30
-	feature:  OBJECTID : TYPEID maybeassign.; 
+	feature:  OBJECTID ':' TYPEID maybeassign.';' 
 
-	;  shift 36
+	';'  shift 36
 	.  error
 
 
@@ -257,30 +257,30 @@ state 31
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 37
 
 state 32
-	feature:  OBJECTID ( formals ) :.TYPEID { expr } ; 
-	feature:  OBJECTID ( formals ) :.TYPEID { error } 
+	feature:  OBJECTID '(' formals ')' ':'.TYPEID '{' expr '}' ';' 
+	feature:  OBJECTID '(' formals ')' ':'.TYPEID '{' error '}' 
 
 	TYPEID  shift 52
 	.  error
 
 
 state 33
-	feature:  OBJECTID ( formals error ).: TYPEID { expr } 
+	feature:  OBJECTID '(' formals error ')'.':' TYPEID '{' expr '}' 
 
-	:  shift 53
+	':'  shift 53
 	.  error
 
 
 state 34
-	commaformals:  commaformals ,.formal 
+	commaformals:  commaformals ','.formal 
 
 	OBJECTID  shift 24
 	.  error
@@ -288,44 +288,44 @@ state 34
 	formal  goto 54
 
 state 35
-	formal:  OBJECTID : TYPEID.    (21)
+	formal:  OBJECTID ':' TYPEID.    (21)
 
 	.  reduce 21 (src line 173)
 
 
 state 36
-	feature:  OBJECTID : TYPEID maybeassign ;.    (12)
+	feature:  OBJECTID ':' TYPEID maybeassign ';'.    (12)
 
 	.  reduce 12 (src line 134)
 
 
 state 37
 	maybeassign:  ASSIGN expr.    (16)
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 16 (src line 145)
 
 
 state 38
 	expr:  OBJECTID.ASSIGN expr 
-	expr:  OBJECTID.( maybeexprs ) 
+	expr:  OBJECTID.'(' maybeexprs ')' 
 	expr:  OBJECTID.    (41)
 
 	ASSIGN  shift 62
-	(  shift 63
+	'('  shift 63
 	.  reduce 41 (src line 220)
 
 
@@ -343,9 +343,9 @@ state 39
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 64
@@ -364,15 +364,15 @@ state 40
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 65
 
 state 41
-	expr:  {.exprlist } 
+	expr:  '{'.exprlist '}' 
 
 	error  shift 68
 	BOOL  shift 51
@@ -386,9 +386,9 @@ state 41
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 67
@@ -418,9 +418,9 @@ state 43
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 73
@@ -446,15 +446,15 @@ state 45
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 75
 
 state 46
-	expr:  ~.expr 
+	expr:  '~'.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -467,9 +467,9 @@ state 46
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 76
@@ -488,15 +488,15 @@ state 47
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 77
 
 state 48
-	expr:  (.expr ) 
+	expr:  '('.expr ')' 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -509,9 +509,9 @@ state 48
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 78
@@ -535,42 +535,42 @@ state 51
 
 
 state 52
-	feature:  OBJECTID ( formals ) : TYPEID.{ expr } ; 
-	feature:  OBJECTID ( formals ) : TYPEID.{ error } 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID.'{' expr '}' ';' 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID.'{' error '}' 
 
-	{  shift 79
+	'{'  shift 79
 	.  error
 
 
 state 53
-	feature:  OBJECTID ( formals error ) :.TYPEID { expr } 
+	feature:  OBJECTID '(' formals error ')' ':'.TYPEID '{' expr '}' 
 
 	TYPEID  shift 80
 	.  error
 
 
 state 54
-	commaformals:  commaformals , formal.    (20)
+	commaformals:  commaformals ',' formal.    (20)
 
 	.  reduce 20 (src line 166)
 
 
 state 55
-	expr:  expr @.TYPEID . OBJECTID ( maybeexprs ) 
+	expr:  expr '@'.TYPEID '.' OBJECTID '(' maybeexprs ')' 
 
 	TYPEID  shift 81
 	.  error
 
 
 state 56
-	expr:  expr ..OBJECTID ( maybeexprs ) 
+	expr:  expr '.'.OBJECTID '(' maybeexprs ')' 
 
 	OBJECTID  shift 82
 	.  error
 
 
 state 57
-	expr:  expr +.expr 
+	expr:  expr '+'.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -583,15 +583,15 @@ state 57
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 83
 
 state 58
-	expr:  expr -.expr 
+	expr:  expr '-'.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -604,15 +604,15 @@ state 58
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 84
 
 state 59
-	expr:  expr *.expr 
+	expr:  expr '*'.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -625,15 +625,15 @@ state 59
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 85
 
 state 60
-	expr:  expr /.expr 
+	expr:  expr '/'.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -646,9 +646,9 @@ state 60
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 86
@@ -667,9 +667,9 @@ state 61
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 87
@@ -688,15 +688,15 @@ state 62
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 88
 
 state 63
-	expr:  OBJECTID (.maybeexprs ) 
+	expr:  OBJECTID '('.maybeexprs ')' 
 	maybeexprs: .    (45)
 
 	BOOL  shift 51
@@ -710,9 +710,9 @@ state 63
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  reduce 45 (src line 230)
 
 	expr  goto 91
@@ -720,50 +720,50 @@ state 63
 	maybeexprs  goto 89
 
 state 64
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  IF expr.THEN expr ELSE expr FI 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	THEN  shift 92
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
 state 65
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  WHILE expr.LOOP expr POOL 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	LOOP  shift 93
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
 state 66
-	expr:  { exprlist.} 
-	exprlist:  exprlist.expr ; 
+	expr:  '{' exprlist.'}' 
+	exprlist:  exprlist.expr ';' 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -776,48 +776,48 @@ state 66
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	}  shift 94
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'}'  shift 94
+	'('  shift 48
 	.  error
 
 	expr  goto 95
 
 state 67
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
-	exprlist:  expr.; 
+	exprlist:  expr.';' 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	;  shift 96
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	';'  shift 96
 	.  error
 
 
 state 68
-	exprlist:  error.; 
+	exprlist:  error.';' 
 
-	;  shift 97
+	';'  shift 97
 	.  error
 
 
 state 69
 	expr:  LET bindings.IN expr 
-	bindings:  bindings., binding 
+	bindings:  bindings.',' binding 
 
 	IN  shift 98
-	,  shift 99
+	','  shift 99
 	.  error
 
 
@@ -834,30 +834,30 @@ state 71
 
 
 state 72
-	binding:  OBJECTID.: TYPEID maybeassign 
+	binding:  OBJECTID.':' TYPEID maybeassign 
 
-	:  shift 100
+	':'  shift 100
 	.  error
 
 
 state 73
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  CASE expr.OF branches ESAC 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	OF  shift 101
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
@@ -868,79 +868,79 @@ state 74
 
 
 state 75
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  ISVOID expr.    (32)
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
-	@  shift 55
-	.  shift 56
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 32 (src line 199)
 
 
 state 76
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
-	expr:  ~ expr.    (37)
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
+	expr:  '~' expr.    (37)
 	expr:  expr.CMP expr 
 
-	@  shift 55
-	.  shift 56
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 37 (src line 209)
 
 
 state 77
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 	expr:  NOT expr.    (39)
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 39 (src line 213)
 
 
 state 78
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
-	expr:  ( expr.) 
+	expr:  '(' expr.')' 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	)  shift 102
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	')'  shift 102
 	.  error
 
 
 state 79
-	feature:  OBJECTID ( formals ) : TYPEID {.expr } ; 
-	feature:  OBJECTID ( formals ) : TYPEID {.error } 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{'.expr '}' ';' 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{'.error '}' 
 
 	error  shift 104
 	BOOL  shift 51
@@ -954,170 +954,170 @@ state 79
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 103
 
 state 80
-	feature:  OBJECTID ( formals error ) : TYPEID.{ expr } 
+	feature:  OBJECTID '(' formals error ')' ':' TYPEID.'{' expr '}' 
 
-	{  shift 105
+	'{'  shift 105
 	.  error
 
 
 state 81
-	expr:  expr @ TYPEID.. OBJECTID ( maybeexprs ) 
+	expr:  expr '@' TYPEID.'.' OBJECTID '(' maybeexprs ')' 
 
-	.  shift 106
+	'.'  shift 106
 	.  error
 
 
 state 82
-	expr:  expr . OBJECTID.( maybeexprs ) 
+	expr:  expr '.' OBJECTID.'(' maybeexprs ')' 
 
-	(  shift 107
+	'('  shift 107
 	.  error
 
 
 state 83
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr + expr.    (33)
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr '+' expr.    (33)
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 33 (src line 201)
 
 
 state 84
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr - expr.    (34)
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr '-' expr.    (34)
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 34 (src line 203)
 
 
 state 85
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr * expr.    (35)
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr '*' expr.    (35)
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
-	@  shift 55
-	.  shift 56
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 35 (src line 205)
 
 
 state 86
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
-	expr:  expr / expr.    (36)
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
+	expr:  expr '/' expr.    (36)
 	expr:  expr.CMP expr 
 
-	@  shift 55
-	.  shift 56
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 36 (src line 207)
 
 
 state 87
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 	expr:  expr CMP expr.    (38)
 
 	CMP  error
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 38 (src line 211)
 
 
 state 88
 	expr:  OBJECTID ASSIGN expr.    (22)
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 22 (src line 178)
 
 
 state 89
-	expr:  OBJECTID ( maybeexprs.) 
+	expr:  OBJECTID '(' maybeexprs.')' 
 
-	)  shift 108
+	')'  shift 108
 	.  error
 
 
 state 90
 	maybeexprs:  exprs.    (46)
-	exprs:  exprs., expr 
+	exprs:  exprs.',' expr 
 
-	,  shift 109
+	','  shift 109
 	.  reduce 46 (src line 233)
 
 
 state 91
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 	exprs:  expr.    (47)
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 47 (src line 237)
 
 
@@ -1135,9 +1135,9 @@ state 92
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 110
@@ -1156,48 +1156,48 @@ state 93
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 111
 
 state 94
-	expr:  { exprlist }.    (28)
+	expr:  '{' exprlist '}'.    (28)
 
 	.  reduce 28 (src line 191)
 
 
 state 95
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
-	exprlist:  exprlist expr.; 
+	exprlist:  exprlist expr.';' 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	;  shift 112
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	';'  shift 112
 	.  error
 
 
 state 96
-	exprlist:  expr ;.    (49)
+	exprlist:  expr ';'.    (49)
 
 	.  reduce 49 (src line 244)
 
 
 state 97
-	exprlist:  error ;.    (51)
+	exprlist:  error ';'.    (51)
 
 	.  reduce 51 (src line 249)
 
@@ -1216,15 +1216,15 @@ state 98
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 113
 
 state 99
-	bindings:  bindings ,.binding 
+	bindings:  bindings ','.binding 
 
 	OBJECTID  shift 72
 	.  error
@@ -1232,7 +1232,7 @@ state 99
 	binding  goto 114
 
 state 100
-	binding:  OBJECTID :.TYPEID maybeassign 
+	binding:  OBJECTID ':'.TYPEID maybeassign 
 
 	TYPEID  shift 115
 	.  error
@@ -1248,41 +1248,41 @@ state 101
 	branches  goto 116
 
 state 102
-	expr:  ( expr ).    (40)
+	expr:  '(' expr ')'.    (40)
 
 	.  reduce 40 (src line 215)
 
 
 state 103
-	feature:  OBJECTID ( formals ) : TYPEID { expr.} ; 
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{' expr.'}' ';' 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	}  shift 119
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	'}'  shift 119
 	.  error
 
 
 state 104
-	feature:  OBJECTID ( formals ) : TYPEID { error.} 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{' error.'}' 
 
-	}  shift 120
+	'}'  shift 120
 	.  error
 
 
 state 105
-	feature:  OBJECTID ( formals error ) : TYPEID {.expr } 
+	feature:  OBJECTID '(' formals error ')' ':' TYPEID '{'.expr '}' 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -1295,22 +1295,22 @@ state 105
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 121
 
 state 106
-	expr:  expr @ TYPEID ..OBJECTID ( maybeexprs ) 
+	expr:  expr '@' TYPEID '.'.OBJECTID '(' maybeexprs ')' 
 
 	OBJECTID  shift 122
 	.  error
 
 
 state 107
-	expr:  expr . OBJECTID (.maybeexprs ) 
+	expr:  expr '.' OBJECTID '('.maybeexprs ')' 
 	maybeexprs: .    (45)
 
 	BOOL  shift 51
@@ -1324,9 +1324,9 @@ state 107
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  reduce 45 (src line 230)
 
 	expr  goto 91
@@ -1334,13 +1334,13 @@ state 107
 	maybeexprs  goto 123
 
 state 108
-	expr:  OBJECTID ( maybeexprs ).    (25)
+	expr:  OBJECTID '(' maybeexprs ')'.    (25)
 
 	.  reduce 25 (src line 185)
 
 
 state 109
-	exprs:  exprs ,.expr 
+	exprs:  exprs ','.expr 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -1353,89 +1353,89 @@ state 109
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 124
 
 state 110
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  IF expr THEN expr.ELSE expr FI 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	ELSE  shift 125
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
 state 111
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  WHILE expr LOOP expr.POOL 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	POOL  shift 126
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
 state 112
-	exprlist:  exprlist expr ;.    (50)
+	exprlist:  exprlist expr ';'.    (50)
 
 	.  reduce 50 (src line 247)
 
 
 state 113
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  LET bindings IN expr.    (29)
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 29 (src line 193)
 
 
 state 114
-	bindings:  bindings , binding.    (53)
+	bindings:  bindings ',' binding.    (53)
 
 	.  reduce 53 (src line 256)
 
 
 state 115
-	binding:  OBJECTID : TYPEID.maybeassign 
+	binding:  OBJECTID ':' TYPEID.maybeassign 
 	maybeassign: .    (15)
 
 	ASSIGN  shift 31
@@ -1460,77 +1460,77 @@ state 117
 
 
 state 118
-	branch:  OBJECTID.: TYPEID DARROW expr ; 
+	branch:  OBJECTID.':' TYPEID DARROW expr ';' 
 
-	:  shift 130
+	':'  shift 130
 	.  error
 
 
 state 119
-	feature:  OBJECTID ( formals ) : TYPEID { expr }.; 
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{' expr '}'.';' 
 
-	;  shift 131
+	';'  shift 131
 	.  error
 
 
 state 120
-	feature:  OBJECTID ( formals ) : TYPEID { error }.    (13)
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{' error '}'.    (13)
 
 	.  reduce 13 (src line 136)
 
 
 state 121
-	feature:  OBJECTID ( formals error ) : TYPEID { expr.} 
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	feature:  OBJECTID '(' formals error ')' ':' TYPEID '{' expr.'}' 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	}  shift 132
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	'}'  shift 132
 	.  error
 
 
 state 122
-	expr:  expr @ TYPEID . OBJECTID.( maybeexprs ) 
+	expr:  expr '@' TYPEID '.' OBJECTID.'(' maybeexprs ')' 
 
-	(  shift 133
+	'('  shift 133
 	.  error
 
 
 state 123
-	expr:  expr . OBJECTID ( maybeexprs.) 
+	expr:  expr '.' OBJECTID '(' maybeexprs.')' 
 
-	)  shift 134
+	')'  shift 134
 	.  error
 
 
 state 124
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
-	exprs:  exprs , expr.    (48)
+	exprs:  exprs ',' expr.    (48)
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  reduce 48 (src line 240)
 
 
@@ -1548,9 +1548,9 @@ state 125
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 135
@@ -1562,7 +1562,7 @@ state 126
 
 
 state 127
-	binding:  OBJECTID : TYPEID maybeassign.    (55)
+	binding:  OBJECTID ':' TYPEID maybeassign.    (55)
 
 	.  reduce 55 (src line 262)
 
@@ -1580,26 +1580,26 @@ state 129
 
 
 state 130
-	branch:  OBJECTID :.TYPEID DARROW expr ; 
+	branch:  OBJECTID ':'.TYPEID DARROW expr ';' 
 
 	TYPEID  shift 136
 	.  error
 
 
 state 131
-	feature:  OBJECTID ( formals ) : TYPEID { expr } ;.    (11)
+	feature:  OBJECTID '(' formals ')' ':' TYPEID '{' expr '}' ';'.    (11)
 
 	.  reduce 11 (src line 131)
 
 
 state 132
-	feature:  OBJECTID ( formals error ) : TYPEID { expr }.    (14)
+	feature:  OBJECTID '(' formals error ')' ':' TYPEID '{' expr '}'.    (14)
 
 	.  reduce 14 (src line 138)
 
 
 state 133
-	expr:  expr @ TYPEID . OBJECTID (.maybeexprs ) 
+	expr:  expr '@' TYPEID '.' OBJECTID '('.maybeexprs ')' 
 	maybeexprs: .    (45)
 
 	BOOL  shift 51
@@ -1613,9 +1613,9 @@ state 133
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  reduce 45 (src line 230)
 
 	expr  goto 91
@@ -1623,43 +1623,43 @@ state 133
 	maybeexprs  goto 137
 
 state 134
-	expr:  expr . OBJECTID ( maybeexprs ).    (24)
+	expr:  expr '.' OBJECTID '(' maybeexprs ')'.    (24)
 
 	.  reduce 24 (src line 183)
 
 
 state 135
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
 	expr:  IF expr THEN expr ELSE expr.FI 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
 
 	CMP  shift 61
 	FI  shift 138
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
 	.  error
 
 
 state 136
-	branch:  OBJECTID : TYPEID.DARROW expr ; 
+	branch:  OBJECTID ':' TYPEID.DARROW expr ';' 
 
 	DARROW  shift 139
 	.  error
 
 
 state 137
-	expr:  expr @ TYPEID . OBJECTID ( maybeexprs.) 
+	expr:  expr '@' TYPEID '.' OBJECTID '(' maybeexprs.')' 
 
-	)  shift 140
+	')'  shift 140
 	.  error
 
 
@@ -1670,7 +1670,7 @@ state 138
 
 
 state 139
-	branch:  OBJECTID : TYPEID DARROW.expr ; 
+	branch:  OBJECTID ':' TYPEID DARROW.expr ';' 
 
 	BOOL  shift 51
 	CASE  shift 43
@@ -1683,42 +1683,42 @@ state 139
 	OBJECTID  shift 38
 	STRING  shift 50
 	WHILE  shift 40
-	~  shift 46
-	{  shift 41
-	(  shift 48
+	'~'  shift 46
+	'{'  shift 41
+	'('  shift 48
 	.  error
 
 	expr  goto 141
 
 state 140
-	expr:  expr @ TYPEID . OBJECTID ( maybeexprs ).    (23)
+	expr:  expr '@' TYPEID '.' OBJECTID '(' maybeexprs ')'.    (23)
 
 	.  reduce 23 (src line 181)
 
 
 state 141
-	expr:  expr.@ TYPEID . OBJECTID ( maybeexprs ) 
-	expr:  expr.. OBJECTID ( maybeexprs ) 
-	expr:  expr.+ expr 
-	expr:  expr.- expr 
-	expr:  expr.* expr 
-	expr:  expr./ expr 
+	expr:  expr.'@' TYPEID '.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'.' OBJECTID '(' maybeexprs ')' 
+	expr:  expr.'+' expr 
+	expr:  expr.'-' expr 
+	expr:  expr.'*' expr 
+	expr:  expr.'/' expr 
 	expr:  expr.CMP expr 
-	branch:  OBJECTID : TYPEID DARROW expr.; 
+	branch:  OBJECTID ':' TYPEID DARROW expr.';' 
 
 	CMP  shift 61
-	+  shift 57
-	-  shift 58
-	*  shift 59
-	/  shift 60
-	@  shift 55
-	.  shift 56
-	;  shift 142
+	'+'  shift 57
+	'-'  shift 58
+	'*'  shift 59
+	'/'  shift 60
+	'@'  shift 55
+	'.'  shift 56
+	';'  shift 142
 	.  error
 
 
 state 142
-	branch:  OBJECTID : TYPEID DARROW expr ;.    (58)
+	branch:  OBJECTID ':' TYPEID DARROW expr ';'.    (58)
 
 	.  reduce 58 (src line 274)
 
