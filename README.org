@@ -4,7 +4,11 @@ gocool
 Go implementation of the Cool programming language.
 
 * TODOs
-- [X] Check that "self" cannot be used as an attribute, function parameter, case variable, etc.
+- [ ] Fix asciiz to never write a backslash in a string.
+      (Already fixed for \\" end-of-string thinking it's an escaped quote.)
+      (But now found that \\n in mid-string thinks it's a newline.)
+- [ ] Do the GC stuff.
+- [ ] Cleanup.
 
 * MIPS registers
 |----------------+--------------+------------------------------------+-------------------|
