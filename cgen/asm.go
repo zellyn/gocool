@@ -3,6 +3,7 @@ package cgen
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 type asm struct {
@@ -57,17 +58,17 @@ func (a asm) Text() (int, error) {
 }
 
 func (a asm) AsciiZ(s string) (int, error) {
-	if s == "" || s[len(s)-1] != '\\' {
+	if s == "" || !strings.ContainsRune(s, '\\') {
 		return fmt.Fprintf(a, "\t.asciiz\t%q\n", s)
 	}
-	slashes := "\t.byte\t"
-	for s != "" && s[len(s)-1] == '\\' {
-		slashes = slashes + "0x5C, "
-		s = s[:len(s)-1]
+	a.Comment(fmt.Sprintf("%q", s))
+	bb := "\t.byte\t"
+	for _, b := range []byte(s) {
+		bb = bb + fmt.Sprintf("%d,", b)
 	}
-	slashes = slashes + "0x00"
+	bb = bb + "0\n"
 
-	return fmt.Fprintf(a, "\t.ascii\t%q\n%s\n", s, slashes)
+	return fmt.Fprintf(a, bb)
 }
 
 func (a asm) WordAlign() (int, error) {
