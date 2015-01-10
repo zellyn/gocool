@@ -61,7 +61,7 @@ func Gen(prog *parser.Program, cs parser.Classes, useGc bool, testGc bool, a asm
 	writeIsa(a)
 	writeBuiltinInits(a)
 	generateInits(prog)
-	writeMethods(prog, cs, constants, tags, a)
+	writeMethods(prog, cs, useGc, constants, tags, a)
 }
 
 // genTags generates an integer tag for each class. Children will
@@ -346,7 +346,7 @@ func writeDispatchTables(prog *parser.Program, cs parser.Classes, tags map[strin
 }
 
 // writeMethods writes the method definitions out.
-func writeMethods(prog *parser.Program, cs parser.Classes, c *constants, tags map[string]int, a asm) {
+func writeMethods(prog *parser.Program, cs parser.Classes, useGc bool, c *constants, tags map[string]int, a asm) {
 	l := labeler(0)
 	t := temps(0)
 
@@ -367,13 +367,13 @@ func writeMethods(prog *parser.Program, cs parser.Classes, c *constants, tags ma
 				a.Label("Main_init", "Name expected by runtime.")
 			}
 
-			writeMethod(prog, cs, c, tags, cl, m, &l, &t, a)
+			writeMethod(prog, cs, c, useGc, tags, cl, m, &l, &t, a)
 		}
 	}
 }
 
 // writeMethod writes out the implementation of a single method.
-func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, m *parser.Method, l *labeler, t *temps, a asm) {
+func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, useGc bool, tags map[string]int, cl *parser.Class, m *parser.Method, l *labeler, t *temps, a asm) {
 	temps := et(m.Expr)     // # of temporaries
 	nargs := len(m.Formals) // # of arguments
 	nnew := temps + 3       // # of new stack slots needed (args are already on the stack)
@@ -405,7 +405,7 @@ func writeMethod(prog *parser.Program, cs parser.Classes, c *constants, tags map
 	table = table.Add(":ra", "Object", "")
 	table = table.Add(":s0", "Object", "")
 
-	writeExpr(cs, c, tags, cl, table, nframe, m.Expr, l, t, a)
+	writeExpr(cs, c, useGc, tags, cl, table, nframe, m.Expr, l, t, a)
 
 	// Function exit
 	a.Inst("lw", fmt.Sprintf("$s0 %d($sp)", 4*(nnew-2)))
@@ -432,20 +432,20 @@ func isa(cs parser.Classes, a, b string) bool {
 }
 
 // writeExpr writes out the code for a single expression.
-func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
+func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
 	a.Comment(fmt.Sprintf("line %d", e.Line))
 	switch e.Op {
 	case parser.Block:
 		for _, e2 := range e.Exprs {
-			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a)
+			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a)
 		}
 	case parser.StaticDispatch:
 		for _, e2 := range e.Exprs {
-			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
-			a.Inst("sw", "$a0 0($sp)")                             // Push it
-			a.Inst("addiu", "$sp $sp -4")                          // Decrement $sp
+			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
+			a.Inst("sw", "$a0 0($sp)")                                    // Push it
+			a.Inst("addiu", "$sp $sp -4")                                 // Decrement $sp
 		}
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
 		entry, ok := cs[e.InternalType].MethodTable.Get(e.Text)
 		if !ok {
 			log.Panicf("Cannot find %s.%s.", e.InternalType, e.Text)
@@ -456,11 +456,11 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("jal", fmt.Sprintf("%s.%s", entry.Class, e.Text))
 	case parser.Dispatch:
 		for _, e2 := range e.Exprs {
-			writeExpr(cs, c, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
-			a.Inst("sw", "$a0 0($sp)")                             // Push it
-			a.Inst("addiu", "$sp $sp -4")                          // Decrement $sp
+			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
+			a.Inst("sw", "$a0 0($sp)")                                    // Push it
+			a.Inst("addiu", "$sp $sp -4")                                 // Decrement $sp
 		}
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate object target
 
 		// Check for void.
 		overVoid := l.Next()
@@ -500,24 +500,24 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("lw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
 		}
 	case parser.Cond:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
 		lFalse := l.Next()
 		lEnd := l.Next()
 		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
 		a.Inst("beq", fmt.Sprintf("$t0 $zero %s", lFalse))
-		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // True branch
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Right, l, t, a) // True branch
 		a.Inst("j", lEnd)
 		a.Label(lFalse)
-		writeExpr(cs, c, tags, cl, table, nframe, e.Else, l, t, a) // False branch
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Else, l, t, a) // False branch
 		a.Label(lEnd)
 	case parser.Eq:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
 		frameOffset := 4 * (nframe - 1 - index)
 		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
-		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
 		a.Inst("move", "$t1 $a0")
 		a.Inst("lw", fmt.Sprintf("$t2 %d($fp)", frameOffset), temp)
 		a.Inst("la", "$a0 bool_True")
@@ -534,7 +534,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 	case parser.BoolConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
@@ -543,7 +543,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 
 		a.Inst("jal", "Object.copy")
 		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
-		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
 		a.Inst("lw", "$t1 12($a0)")
 		a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		a.Inst("lw", "$t0 12($a0)")
@@ -561,7 +561,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		}
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.TypCase:
-		writeTypCase(cs, c, tags, cl, table, nframe, e, l, t, a)
+		writeTypCase(cs, c, useGc, tags, cl, table, nframe, e, l, t, a)
 	case parser.Let:
 		typ := e.InternalType
 		if typ == "SELF_TYPE" {
@@ -584,24 +584,24 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			}
 			a.Inst("sw", fmt.Sprintf("$t0 %d($fp)", frameOffset), "default value for "+e.Text)
 		} else {
-			writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // calculate intial value
+			writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // calculate intial value
 			a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "calculated value for "+e.Text)
 		}
-		writeExpr(cs, c, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
+		writeExpr(cs, c, useGc, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
 
 	case parser.Loop:
 		top := l.Next()
 		over := l.Next()
 		a.Label(top)
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a)
 		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
 		a.Inst("beq", fmt.Sprintf("$t0 $zero %s", over))
-		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a)
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Right, l, t, a)
 		a.Inst("j", top)
 		a.Label(over)
 		a.Inst("move", "$a0 $zero") // Make sure loop value is void.
 	case parser.Assign:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a)
 		entry, ok := table.Get(e.Text)
 		if !ok {
 			log.Panicf("Unable to find variable named %q to assign to", e.Text)
@@ -611,9 +611,13 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		} else {
 			// Object attribute is just an offset from self.
 			a.Inst("sw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
+			if useGc {
+				a.Inst("addiu", fmt.Sprintf("$a1 $s0 %d", 4*(3+entry.Index)))
+				a.Inst("jal", "_GenGC_Assign")
+			}
 		}
 	case parser.Lt, parser.Leq:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
@@ -621,7 +625,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		frameOffset := 4 * (nframe - 1 - index)
 
 		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
-		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
 		a.Inst("lw", "$t1 12($a0)")
 		a.Inst("lw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		a.Inst("lw", "$t0 12($a0)")
@@ -661,14 +665,14 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("lw", fmt.Sprintf("$t0 %d($t0)", 4*(1+entry.Index))) // load method address
 		a.Inst("jalr", "$t0")
 	case parser.Neg:
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("jal", "Object.copy")
 		a.Inst("lw", "$t0 12($a0)")
 		a.Inst("neg", "$t0 $t0")
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.Comp:
 		over := l.Next()
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("la", "$t1 bool_False")
 		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
 		a.Inst("bne", fmt.Sprintf("$t0 $zero %s", over))
@@ -677,7 +681,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("move", "$a0 $t1")
 	case parser.Isvoid:
 		isVoid := l.Next()
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("la", "$t0 bool_True")
 		a.Inst("beq", fmt.Sprintf("$a0 $zero %s", isVoid))
 		a.Inst("la", "$t0 bool_False")
@@ -690,7 +694,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 }
 
 // writeTypCase writes out the assembly for a case expression.
-func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
+func writeTypCase(cs parser.Classes, c *constants, useGc bool, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
 
 	// We need case tags most-specific first, so sort by descending tag.
 	byTag := make(map[int]*parser.Expr, len(e.Exprs))
@@ -703,7 +707,7 @@ func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *pars
 	sort.Sort(sort.Reverse(sort.IntSlice(caseTags)))
 
 	// Calculate the expression to be cased on.
-	writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate expression to case on.
+	writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate expression to case on.
 
 	// Find the next slot, and store $a0 there. Use a temporary table,
 	// because the slot might be named differently in each branch.
@@ -728,7 +732,7 @@ func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *pars
 		a.Inst("li", fmt.Sprintf("$a1 %d", tag))
 		a.Inst("jal", "isa")
 		a.Inst("beq", fmt.Sprintf("$a1 $zero %s", skip))
-		writeExpr(cs, c, tags, cl, table.Add(e2.Text, e2.Type, ""), nframe, e2.Left, l, t, a)
+		writeExpr(cs, c, useGc, tags, cl, table.Add(e2.Text, e2.Type, ""), nframe, e2.Left, l, t, a)
 		a.Inst("j", over)
 		a.Label(skip)
 	}
