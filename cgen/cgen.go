@@ -362,6 +362,7 @@ func writeMethods(prog *parser.Program, cs parser.Classes, c *constants, tags ma
 			m := f.Method
 			a.CommentH3(fmt.Sprintf("%s.%s", cl.Name, m.Name))
 			a.Label(fmt.Sprintf("%s.%s", cl.Name, m.Name))
+			a.Inst("nop", "", fmt.Sprintf("[%s.%s]", cl.Name, m.Name))
 			if cl.Name == "Main" && m.Name == "_init" {
 				a.Label("Main_init", "Name expected by runtime.")
 			}
@@ -520,21 +521,26 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("move", "$t1 $a0")
 		a.Inst("lw", fmt.Sprintf("$t2 %d($fp)", frameOffset), temp)
 		a.Inst("la", "$a0 bool_True")
+		// If the pointers are equal, it's easy.
+		easyEqual := l.Next()
+		a.Inst("beq", fmt.Sprintf("$t1 $t2 %s", easyEqual))
 		a.Inst("la", "$a1 bool_False")
 		a.Inst("jal", "equality_test")
+		a.Label(easyEqual)
 	case parser.IntConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.int(e.Text)))
 	case parser.StringConst:
-		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)), e.Text)
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)), fmt.Sprintf("%q", e.Text))
 	case parser.BoolConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
 		frameOffset := 4 * (nframe - 1 - index)
 
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("jal", "Object.copy")
 		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
@@ -607,12 +613,13 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("sw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
 		}
 	case parser.Lt, parser.Leq:
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
+
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
 		index := table.Entries[len(table.Entries)-1].Index
 		frameOffset := 4 * (nframe - 1 - index)
 
-		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), temp)
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a) // Calculate right-hand side
 		a.Inst("lw", "$t1 12($a0)")
@@ -637,7 +644,8 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 			a.Inst("la", fmt.Sprintf("$a0 %s_protObj", e.InternalType))
 		} else {
 			// SELF_TYPE: use prototype-object pointer at start of self's dispatch table.
-			a.Inst("la", "$a0 8($s0)")
+			a.Inst("lw", "$a0 8($s0)") // dispatch table
+			a.Inst("lw", "$a0 0($a0)") // dispatch table
 		}
 		a.Inst("jal", "Object.copy")
 
@@ -893,7 +901,7 @@ func et(e *parser.Expr) int {
 	case parser.Loop:
 		return max(et(e.Left), et(e.Right))
 	case parser.TypCase:
-		return max(et(e.Left), maxEt(e.Exprs))
+		return max(et(e.Left), 1+maxEt(e.Exprs))
 	case parser.Branch:
 		return 1 + et(e.Left)
 	case parser.NoExpr:
