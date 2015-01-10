@@ -464,7 +464,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		// Check for void.
 		overVoid := l.Next()
 		a.Inst("bne", fmt.Sprintf("$a0 $zero %s", overVoid))
-		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)))
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)), cl.Filename)
 		a.Inst("li", fmt.Sprintf("$t1 %d", e.Line))
 		a.Inst("j", "_dispatch_abort")
 		a.Label(overVoid)
@@ -525,7 +525,7 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 	case parser.IntConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.int(e.Text)))
 	case parser.StringConst:
-		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)))
+		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)), e.Text)
 	case parser.BoolConst:
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
@@ -588,8 +588,8 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		over := l.Next()
 		a.Label(top)
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a)
-		a.Inst("la", "$t0 bool_True")
-		a.Inst("bne", fmt.Sprintf("$a0 $t0 %s", over))
+		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
+		a.Inst("beq", fmt.Sprintf("$t0 $zero %s", over))
 		writeExpr(cs, c, tags, cl, table, nframe, e.Right, l, t, a)
 		a.Inst("j", top)
 		a.Label(over)
@@ -659,14 +659,17 @@ func writeExpr(cs parser.Classes, c *constants, tags map[string]int, cl *parser.
 		a.Inst("neg", "$t0 $t0")
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.Comp:
+		over := l.Next()
 		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
-		// Hehe. This is evil.
-		a.Inst("la", "$t0 bool_True")
 		a.Inst("la", "$t1 bool_False")
-		a.Inst("xor", "$t0 $t0 $t1")
-		a.Inst("xor", "$a0 $a0 $t0")
+		a.Inst("lw", "$t0 12($a0)") // Load boolean value into $t0
+		a.Inst("bne", fmt.Sprintf("$t0 $zero %s", over))
+		a.Inst("la", "$t1 bool_True")
+		a.Label(over)
+		a.Inst("move", "$a0 $t1")
 	case parser.Isvoid:
 		isVoid := l.Next()
+		writeExpr(cs, c, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("la", "$t0 bool_True")
 		a.Inst("beq", fmt.Sprintf("$a0 $zero %s", isVoid))
 		a.Inst("la", "$t0 bool_False")
@@ -703,7 +706,7 @@ func writeTypCase(cs parser.Classes, c *constants, tags map[string]int, cl *pars
 
 	overVoid := l.Next()
 	a.Inst("bne", fmt.Sprintf("$a0 $zero %s", overVoid))
-	a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)))
+	a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)), cl.Filename)
 	a.Inst("li", fmt.Sprintf("$t1 %d", e.Line))
 	a.Inst("j", "_case_abort2")
 	a.Label(overVoid)
@@ -866,7 +869,7 @@ func et(e *parser.Expr) int {
 	case parser.New:
 		return 0
 	case parser.Let:
-		return 1 + max(et(e.Left), et(e.Right))
+		return max(et(e.Left), 1+et(e.Right))
 	case parser.Object:
 		return 0
 	case parser.Neg:
