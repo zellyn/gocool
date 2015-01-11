@@ -25,6 +25,7 @@ type item struct {
 	err string // An optional error message.
 }
 
+// key is a map of keywords: string keyword to integer type.
 var key = map[string]int{
 	"else":     ELSE,
 	"class":    CLASS,
@@ -402,11 +403,13 @@ func isAlphaNumeric(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
+// Error is used by the yacc-generated parser to signal errors.
 func (l *lexer) Error(e string) {
 	l.parseError = true
-	fmt.Printf("%q, line %d: %s at or near %s\n", l.name, l.lineNumber(), e, printErrorItem(l.lastItem))
+	fmt.Printf("%q, line %d: %s at or near %s\n", l.name, l.lineNumber(), e, printItem(l.lastItem, true))
 }
 
+// Lex is used by the yacc-generated parser to fetch the next Lexeme.
 func (l *lexer) Lex(lval *yySymType) int {
 	i := l.nextItem()
 	*lval = yySymType{str: i.val, line: l.lineNumber()}

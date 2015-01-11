@@ -3,13 +3,6 @@ gocool
 
 Go implementation of the Cool programming language.
 
-* TODOs
-- [ ] Fix asciiz to never write a backslash in a string.
-      (Already fixed for \\" end-of-string thinking it's an escaped quote.)
-      (But now found that \\n in mid-string thinks it's a newline.)
-- [ ] Do the GC stuff.
-- [ ] Cleanup.
-
 * MIPS registers
 |----------------+--------------+------------------------------------+-------------------|
 | Number         | Name         | Function                           | Callee preserves? |
@@ -28,11 +21,12 @@ Go implementation of the Cool programming language.
 |----------------+--------------+------------------------------------+-------------------|
 
 * Code generation
-Stack machine with accumulator
+Stack machine with accumulator.
 
-Accumulator: $a0: almost always holds self.
+Accumulator: $a0: holds result of last expression evaluation.
+$s0 holds a stored copy of "self".
 $sp points to next location in stack (so $sp+4 is the top of the stack)
-$t1 as temporary register
+$t0, $t1, $t2 are temporary registers.
 
 ** Activation Record
 - Return address
@@ -65,30 +59,4 @@ Strings:
 | 12 | Length: pointer to an Int                            |
 | 16 | Characters, nul-terminated, zero-padded to next word |
 |  ⋮ | ⋮                                                    |
-
-** TODOs
-
-*** DONE Create _int_tag, _bool_tag, _string_tag
-*** TODO Define constants for all object tags: TAG_<type>
-# Example:
-TAG_Main = 5
-
-*** DONE Define prototypes for all types <type>_protObj
-*** DONE Define all constants (bool, int, string)
-- [X] Bool false: bool_False
-- [X] Bool true: bool_True
-- [X] Strings: str_const%d (%d = counter)
-  - [X] String str_const0 = filename
-  - [X] String constants for class names
-  - [X] Note that strings need ints for their lengths too
-- [X] Ints: int_const%d (%d = the (unsigned) value of the int)
-*** TODO Define _MemMgr_INITIALIZER, _MemMgr_COLLECTOR, _MemMgr_TEST
-*** DONE Create class_nameTab - table of pointers to class type name strings
-*** DONE Create do-nothing functions for Object_init, IO_init, Int_init, Bool_init, String_init
-*** TODO Create actual init functions for anything else: <type>_init
-*** TODO Create dispatch tables for all objects: <type>_dispTab
-*** TODO Create code for functions: <type>.<method>
-
-
-
 

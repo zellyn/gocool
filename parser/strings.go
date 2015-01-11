@@ -32,7 +32,8 @@ func unescapeString(s string) string {
 	return string(result)
 }
 
-// printableString formats a string for display.
+// printableString formats a string for display, in a format matching
+// the Java/C++ COOL scaffold code.
 func printableString(s string) string {
 	result := ""
 	for _, c := range s {

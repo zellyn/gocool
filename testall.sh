@@ -4,4 +4,4 @@ set -e
 ./testlexer.sh
 ./testparser.sh
 ./testtypes.sh
-NOSLOW=true ./testcgen.sh
+./testcgen.sh
