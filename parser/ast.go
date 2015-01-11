@@ -30,7 +30,6 @@ type Class struct {
 	Attrs    map[string]*Attr
 
 	// For typechecking and codegen
-	Depth       int
 	AttrTable   symbols.Table
 	MethodTable symbols.Table
 	Children    []string

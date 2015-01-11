@@ -3,7 +3,6 @@ package types
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/zellyn/gocool/parser"
@@ -28,18 +27,6 @@ var noInherit = map[string]bool{
 	"String":    true,
 	"Int":       true,
 	"SELF_TYPE": true,
-}
-
-// traceDepths traces out the tree of objects, starting at Object, and
-// assigning a depth (Object=1, its children 2, etc.). Any object that
-// lacks a depth must have an undefined parent, or a cycle.
-func traceDepths(cs parser.Classes, cl *parser.Class, depth int) {
-	// fmt.Printf("%s: %v\n", typ, children[typ])
-	for _, childName := range cl.Children {
-		child := cs[childName]
-		child.Depth = depth
-		traceDepths(cs, child, depth+1)
-	}
 }
 
 // findMethod finds the nearest definition of methodName, starting
@@ -696,7 +683,8 @@ func Check(program *parser.Program) (parser.Classes, error) {
 		if cl.Name != "Object" {
 			parent, ok := cs[cl.Parent]
 			if !ok {
-				log.Fatalf("Parent %q not found.", cl.Parent)
+				fmt.Fprintf(os.Stderr, "%s:%d: Internal error: parent %s of %s not found.\n", cl.Filename, cl.Line, cl.Parent, cl.Name)
+				return nil, theErr
 			}
 			parent.Children = append(parent.Children, cl.Name)
 		}
@@ -727,9 +715,11 @@ func Check(program *parser.Program) (parser.Classes, error) {
 			cs[cl.Name] = cl
 			parent, ok := allCs[cl.Parent]
 			if !ok {
-				log.Fatalf("Parent %q not found.", cl.Parent)
+				err = true
+				fmt.Fprintf(os.Stderr, "%s:%d: Class %s inherits from an undefined class %s.\n", cl.Filename, cl.Line, cl.Name, cl.Parent)
+			} else {
+				parent.Children = append(parent.Children, cl.Name)
 			}
-			parent.Children = append(parent.Children, cl.Name)
 		}
 	}
 
@@ -747,8 +737,6 @@ func Check(program *parser.Program) (parser.Classes, error) {
 			}
 		}
 	}
-
-	traceDepths(cs, cs["Object"], 1)
 
 	err = err || checkInterfaces(cs)
 

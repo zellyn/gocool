@@ -77,7 +77,7 @@ do
     fi
 done
 
-if [[ $INCORRECT == 0 ]]
+if [[ ($INCORRECT == 0) && ($NOSLOW == "") ]]
 then
     echo "WITH COLLECT-ALWAYS GARBAGE COLLECTION"
 	GCFLAGS="-usegc -testgc"
