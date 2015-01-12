@@ -1,5 +1,10 @@
 package cgen
 
+// File constants.go contains the code for referring to Integer,
+// Boolean, and String constants. Any time a constant is referred to
+// in COOL, it needs to be presend in the data segment of the program,
+// so we need to collect, generate, and refer to them consistenly.
+
 import (
 	"fmt"
 	"strconv"
@@ -52,6 +57,9 @@ func (c *constants) string(s string) string {
 	return name
 }
 
+// bool looks up a boolean constant by (token string) value
+// (eg. "true" or "false"). It's just for convenience: they always
+// have the same names.
 func (c *constants) bool(s string) string {
 	if strings.ToLower(s) == "false" {
 		return "bool_False"

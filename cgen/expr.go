@@ -19,10 +19,16 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 	a.Comment(fmt.Sprintf("line %d", e.Line))
 	switch e.Op {
 	case parser.Block:
+		// Just write them one after the other. The last will remain
+		// in $a0, so the block will take the correct value.
+
 		for _, e2 := range e.Exprs {
 			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a)
 		}
 	case parser.StaticDispatch:
+		// Push the arguments one by one, calculate the target, call
+		// the method.
+
 		for _, e2 := range e.Exprs {
 			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
 			a.Inst("sw", "$a0 0($sp)")                                    // Push it
@@ -38,6 +44,9 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		}
 		a.Inst("jal", fmt.Sprintf("%s.%s", entry.Class, e.Text))
 	case parser.Dispatch:
+		// Push the arguments one by one, calculate the target, check
+		// for void, call the function.
+
 		for _, e2 := range e.Exprs {
 			writeExpr(cs, c, useGc, tags, cl, table, nframe, e2, l, t, a) // Calculate argument value
 			a.Inst("sw", "$a0 0($sp)")                                    // Push it
@@ -68,6 +77,10 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Inst("lw", fmt.Sprintf("$t0 %d($t0)", 4*(1+entry.Index))) // load method address
 		a.Inst("jalr", "$t0")
 	case parser.Object:
+		// Self is easy: we saved it in $s0. Otherwise look up the
+		// name in the symbol table, and grab it from either the
+		// stack, or the current object.
+
 		if e.Text == "self" {
 			a.Inst("move", "$a0 $s0", "self")
 			break
@@ -83,6 +96,9 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 			a.Inst("lw", fmt.Sprintf("$a0 %d($s0)", 4*(3+entry.Index)), e.Text)
 		}
 	case parser.Cond:
+		// Calculate the predicate, then branch to calculate either
+		// the left or right branch.
+
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate predicate
 		lFalse := l.Next()
 		lEnd := l.Next()
@@ -94,6 +110,10 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Else, l, t, a) // False branch
 		a.Label(lEnd)
 	case parser.Eq:
+		//  Calculate left side, store in a temporary, calculate right
+		//  side. If pointers are equal, we're done. Otherwise, call
+		//  the equality_test helper in the provided support code.
+
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		temp := t.Next()
 		table := table.Add(temp, e.Type, "")
@@ -111,12 +131,19 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Inst("jal", "equality_test")
 		a.Label(easyEqual)
 	case parser.IntConst:
+		// Integer constant: already in the data section, so just reference it.
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.int(e.Text)))
 	case parser.StringConst:
+		// String constant: already in the data section, so just reference it.
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.string(e.Text)), fmt.Sprintf("%q", e.Text))
 	case parser.BoolConst:
+		// Boolean constant: already in the data section, so just reference it.
 		a.Inst("la", fmt.Sprintf("$a0 %s", c.bool(e.Text)))
 	case parser.Plus, parser.Sub, parser.Mul, parser.Divide:
+		// Integer ops: calculate the left, copy it (so we can mutate
+		// it), save it in a temporary. Then calculate the right, and
+		// do the math.
+
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 
 		temp := t.Next()
@@ -144,8 +171,15 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		}
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.TypCase:
+		// This one's more complicated: call a separate function.
 		writeTypCase(cs, c, useGc, tags, cl, table, nframe, e, l, t, a)
 	case parser.Let:
+		// For lets, we use a "temporary" stack slot too, but give it
+		// a name in the symbol table. The only wrinkle is whether we
+		// have an initializer or not, and if not, what the default
+		// value is. After setting that all up, calculate the let
+		// body.
+
 		typ := e.InternalType
 		if typ == "SELF_TYPE" {
 			typ = cl.Name
@@ -173,6 +207,9 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		writeExpr(cs, c, useGc, tags, cl, tmpTable, nframe, e.Right, l, t, a) // calculate let body
 
 	case parser.Loop:
+		// Just evaluate the condition each time around, and skip out
+		// if it's false.
+
 		top := l.Next()
 		over := l.Next()
 		a.Label(top)
@@ -184,6 +221,9 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Label(over)
 		a.Inst("move", "$a0 $zero") // Make sure loop value is void.
 	case parser.Assign:
+		// For assigns, figure out whether it's an attribute or a
+		// stack variable.
+
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a)
 		entry, ok := table.Get(e.Text)
 		if !ok {
@@ -200,6 +240,10 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 			}
 		}
 	case parser.Lt, parser.Leq:
+		// Comparisons are almost like addition, except we don't need
+		// to copy and mutate. And we need to load the "true" or
+		// "false" objects at the end.
+
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 
 		temp := t.Next()
@@ -226,6 +270,12 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Inst("la", "$a0 bool_False")
 		a.Label(yep)
 	case parser.New:
+		// New is one of the more complex expressions, because we have
+		// to (a) look up the prototype object from self if we don't
+		// have the name because the type is SELF_TYPE, and (b) call
+		// the init function.
+		// TODO(zellyn): include a void check here for the SELF_TYPE branch.
+
 		// Create the new object
 		if e.InternalType != "SELF_TYPE" {
 			a.Inst("la", fmt.Sprintf("$a0 %s_protObj", e.InternalType))
@@ -248,12 +298,14 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Inst("lw", fmt.Sprintf("$t0 %d($t0)", 4*(1+entry.Index))) // load method address
 		a.Inst("jalr", "$t0")
 	case parser.Neg:
+		// Negate: SPIM has an instruction for this, so it's easy.
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("jal", "Object.copy")
 		a.Inst("lw", "$t0 12($a0)")
 		a.Inst("neg", "$t0 $t0")
 		a.Inst("sw", "$t0 12($a0)")
 	case parser.Comp:
+		// Boolean complement: just load the other boolean.
 		over := l.Next()
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("la", "$t1 bool_False")
@@ -263,6 +315,7 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 		a.Label(over)
 		a.Inst("move", "$a0 $t1")
 	case parser.Isvoid:
+		// Isvoid is what you'd expect.
 		isVoid := l.Next()
 		writeExpr(cs, c, useGc, tags, cl, table, nframe, e.Left, l, t, a) // Calculate left-hand side
 		a.Inst("la", "$t0 bool_True")
@@ -276,7 +329,9 @@ func writeExpr(cs parser.Classes, c *constants, useGc bool, tags map[string]int,
 	}
 }
 
-// writeTypCase writes out the assembly for a case expression.
+// writeTypCase writes out the assembly for a case expression. It uses
+// the assembly "isa" helper function defined by writeIsa() to make
+// things simpler.
 func writeTypCase(cs parser.Classes, c *constants, useGc bool, tags map[string]int, cl *parser.Class, table symbols.Table, nframe int, e *parser.Expr, l *labeler, t *temps, a asm) {
 
 	// We need case tags most-specific first, so sort by descending tag.
@@ -299,6 +354,7 @@ func writeTypCase(cs parser.Classes, c *constants, useGc bool, tags map[string]i
 	frameOffset := 4 * (nframe - 1 - index)
 	a.Inst("sw", fmt.Sprintf("$a0 %d($fp)", frameOffset), "cased-on value")
 
+	// Check for case on void.
 	overVoid := l.Next()
 	a.Inst("bne", fmt.Sprintf("$a0 $zero %s", overVoid))
 	a.Inst("la", fmt.Sprintf("$a0 %s", c.string(cl.Filename)), cl.Filename)
@@ -320,6 +376,7 @@ func writeTypCase(cs parser.Classes, c *constants, useGc bool, tags map[string]i
 		a.Label(skip)
 	}
 
+	// If we got here, we had no matching cases: error.
 	a.Inst("j", "_case_abort")
 
 	a.Label(over)

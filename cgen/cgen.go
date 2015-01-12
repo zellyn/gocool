@@ -1,3 +1,8 @@
+// Package cgen contains the code for actually generating assembly. It
+// assumes that typechecking has already succeeded, and would blow up
+// horribly if handed a badly typed AST. There's really only one entry
+// point, Gen. The part that generates assembly for expressions is
+// split off into expr.go, to keep things tidy.
 package cgen
 
 import (

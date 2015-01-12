@@ -1,5 +1,12 @@
 package parser
 
+// File ast.go contains the basic AST structs for COOL. Expressions
+// are all just the Expr type, with an enum for telling them apart. I
+// suppose expressions could also have been an interface, with
+// different implementations per expression type. This way we have
+// lots of switch statements, instead of vtables or some moral
+// equivalent. I'm still not sure which would be better.
+
 import (
 	"fmt"
 	"log"
@@ -175,7 +182,7 @@ func MakeLet(bindings []*Expr, body *Expr) *Expr {
 	}
 }
 
-// SplitFeatures splits features into Methods and Attrs on Class objects.
+// SplitFeatures splits Features into Methods and Attrs on Class objects.
 func (p *Program) SplitFeatures() {
 	for _, c := range p.Classes {
 		for _, f := range c.Features {
