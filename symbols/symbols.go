@@ -9,7 +9,7 @@ import "fmt"
 type Entry struct {
 	Name  string
 	Type  string
-	Class string // Owing object type, or "" for stack variable
+	Class string // Owning object type, or "" for stack variable
 	Index int
 }
 
@@ -19,6 +19,7 @@ type Table struct {
 	NextFeature int
 }
 
+// Get retrieves an entry from a table by name.
 func (t Table) Get(name string) (Entry, bool) {
 	for i := len(t.Entries) - 1; i >= 0; i-- {
 		if t.Entries[i].Name == name {
@@ -28,6 +29,7 @@ func (t Table) Get(name string) (Entry, bool) {
 	return Entry{}, false
 }
 
+// Add adds a new entry to a table, returning a new table.
 func (t Table) Add(name string, typ string, class string) Table {
 	// Defensively copy, so we don't accidentally overwrite.
 	entries := make([]Entry, len(t.Entries), len(t.Entries)+1)
@@ -46,6 +48,9 @@ func (t Table) Add(name string, typ string, class string) Table {
 	}
 }
 
+// Replace changes the stack address of an entry in a table, returning
+// a new table.
+// TODO(zellyn): modifying in place is finicky: just append, without updating NextStack.
 func (t Table) Replace(name string, typ string, class string) (Table, error) {
 	if class == "" {
 		return Table{}, fmt.Errorf("Table.Replace called with no class.")
@@ -79,6 +84,8 @@ func (t Table) Replace(name string, typ string, class string) (Table, error) {
 	}, nil
 }
 
+// Append appends one entire table to the other. It complains if they
+// contain overlapping indexes for stack or feature entries.
 func (t Table) Append(t2 Table) Table {
 	nextStack := t.NextStack
 	if t2.NextStack > 0 {
@@ -105,9 +112,4 @@ func (t Table) Append(t2 Table) Table {
 		NextStack:   nextStack,
 		NextFeature: nextFeature,
 	}
-}
-
-func (t Table) Has(name string) bool {
-	_, ok := t.Get(name)
-	return ok
 }

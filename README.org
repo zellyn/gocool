@@ -1,9 +1,61 @@
 gocool
 ======
 
-Go implementation of the Cool programming language.
+Go implementation of the [[http://theory.stanford.edu/~aiken/software/cool/cool.html][Cool programming language]].
 
-* MIPS registers
+This repository contains a Golang implementation of the homeworks for
+the [[https://www.coursera.org/course/compilers][Coursera compilers class]].
+
+* Parts
+
+The compiler is divided into four parts, corresponding to the four
+programming homework assignments: lexing, scanning, typechecking, and
+compilation. The four shell scripts testlexer.sh, testparser.sh,
+testtypes.sh, and testcgen.sh test each of these four parts. The test
+cases are obtained by running the "grading.pl" script for each
+homework, and copying the test input and output. Minor changes have
+been made, as advised in the homework instructions, typically with
+regard to exact line numbers, although an effort has been made to
+match the examples.
+
+** Lexer
+The lexer is a simple hand-written lexer, defined in parser/lex.go. It
+is a modified version of the [[http://golang.org/src/pkg/text/template/parse/lex.go][go template lexer]], copied and
+modified. For more background, read or watch Rob Pike's excellent
+talk, [[https://google.com/search?q=lexical%20scanning%20in%20go][Lexical Scanning in Go]].
+
+** Parser
+The parser is a [[http://dinosaur.compilertools.net/yacc/][yacc]]-generated LALR(1) parser. Similarities to [[https://code.google.com/p/rsc/source/browse/cc/][Russ
+Cox's C parser]] are due to the fact that it was frequently studied
+while wrestling with yacc. The AST classes in ast.go were defined by
+hand, and parser/dump.go contains functions that print them in the
+format used by the C++/Java Cool scaffolding code provided in the
+course materials.
+
+** Typechecking
+There's nothing interesting about the typechecking code: it was simply
+implemented bit by bit until all the tests passed. It does a bit of
+work (eg. symbol table generation) that could be considered part of
+code generation.
+
+** Compilation
+The compiler (main code in cgen/cgen.go and cgen/expr.go) is about as
+simple as possible: a stack machine with an accumulator ($a0), and
+"self" saved in $s0 for easy reference. There are just a couple of
+things not suggested in the homework assignment: the "isa"
+tag-checking routine, and the embedding of prototype object addresses
+and initialization functions into the dispatch tables.
+
+No effort was made to do any optimizations or to use more registers.
+
+testcgen.sh runs all the tests three times: once with no garbage
+collection, once with garbage collection turned on, and once with both
+garbage collection and collect-after-every-allocation debugging turned
+on. If you set the environment variable NOSLOW before running it, it
+will skip the third phase.
+
+* Supplementary notes
+** MIPS registers
 |----------------+--------------+------------------------------------+-------------------|
 | Number         | Name         | Function                           | Callee preserves? |
 |----------------+--------------+------------------------------------+-------------------|
@@ -20,7 +72,7 @@ Go implementation of the Cool programming language.
 | $31            | ra           | return address                     |                   |
 |----------------+--------------+------------------------------------+-------------------|
 
-* Code generation
+** Code generation
 Stack machine with accumulator.
 
 Accumulator: $a0: holds result of last expression evaluation.
@@ -59,4 +111,3 @@ Strings:
 | 12 | Length: pointer to an Int                            |
 | 16 | Characters, nul-terminated, zero-padded to next word |
 |  ⋮ | ⋮                                                    |
-
