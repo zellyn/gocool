@@ -1,5 +1,4 @@
-gocool
-======
+* gocool
 
 Go implementation of the [[http://theory.stanford.edu/~aiken/software/cool/cool.html][Cool programming language]].
 
