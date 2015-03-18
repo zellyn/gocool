@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,17 +11,27 @@ import (
 	"github.com/zellyn/gocool/parser"
 )
 
+var recursiveDescent = flag.Bool("rd", false, "use recursive descent parser")
+
 func main() {
-	if len(os.Args) != 2 {
+	flag.Parse()
+
+	if len(flag.Args()) != 1 {
 		log.Fatalf("Usage: printparse <filename>\n")
 	}
-	contents, err := ioutil.ReadFile(os.Args[1])
+	fullFilename := flag.Arg(0)
+	contents, err := ioutil.ReadFile(fullFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, filename := path.Split(os.Args[1])
+	_, filename := path.Split(fullFilename)
 
-	prog, err := parser.Parse(filename, string(contents))
+	var prog *parser.Program
+	if *recursiveDescent {
+		prog, err = parser.RdParse(filename, string(contents))
+	} else {
+		prog, err = parser.Parse(filename, string(contents))
+	}
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
