@@ -121,7 +121,7 @@ func (l *lexer) acceptRun(valid string) {
 // lineNumber reports which line we're on, based on the position of
 // the previous item returned by nextItem. Doing it this way
 // means we don't have to worry about peek double counting.
-func (l *lexer) lineNumber() int {
+func (l lexer) lineNumber() int {
 	return 1 + strings.Count(l.input[:l.lastPos], "\n")
 }
 
