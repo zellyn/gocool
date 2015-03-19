@@ -210,6 +210,7 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 // method parses a method definition, picking up after the opening paren.
 func (rd *rdParser) method(name string) (*Method, error) {
 	m := &Method{Name: name}
+	var err error
 
 	// Parse formals
 	for {
@@ -221,8 +222,32 @@ func (rd *rdParser) method(name string) (*Method, error) {
 			return nil, fmt.Errorf("Parsing formals of %s, expected OBJECTID; got %s(%s)", m.Name, i.val, typName(i.typ))
 		}
 	}
-
 	i := rd.next()
+	if i.typ != ':' {
+		return nil, fmt.Errorf("Method definitions expecting colon; got %s(%s)", i.val, typName(i.typ))
+	}
+	i = rd.next()
+	if i.typ != TYPEID {
+		return nil, fmt.Errorf("Method definition expecting type after colon; got %s(%s)", i.val, typName(i.typ))
+	}
+	m.Type = i.val
+
+	i = rd.next()
+	if i.typ != '{' {
+		return nil, fmt.Errorf("Method definition expecting opening brace; got %s(%s)", i.val, typName(i.typ))
+	}
+
+	m.Expr, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+
+	i = rd.next()
+	if i.typ != '}' {
+		return nil, fmt.Errorf("Method definition expecting closing brace; got %s(%s)", i.val, typName(i.typ))
+	}
+
+	i = rd.next()
 	if i.typ != ';' {
 		return nil, fmt.Errorf("Method definitions end with semicolon; got %s(%s)", i.val, typName(i.typ))
 	}
@@ -230,7 +255,8 @@ func (rd *rdParser) method(name string) (*Method, error) {
 	return m, nil
 }
 
-// Parse a possible assign statement
+// maybeAssign parsess a possible assign statement: it returns either
+// a normal expression, or a NoExpr.
 func (rd *rdParser) maybeAssign() (*Expr, error) {
 	i := rd.next()
 	if i.typ != ASSIGN {
@@ -240,6 +266,7 @@ func (rd *rdParser) maybeAssign() (*Expr, error) {
 	return rd.expr()
 }
 
+// expr parses a single expression.
 func (rd *rdParser) expr() (*Expr, error) {
 	return &Expr{}, nil
 }
