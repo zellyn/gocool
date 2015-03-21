@@ -36,6 +36,12 @@ var typNames = map[int]string{
 	eof:      "eof",
 }
 
+type precedence int
+
+const (
+	PREC_NONE precedence = iota
+)
+
 func typName(i int) string {
 	if name, ok := typNames[i]; ok {
 		return name
@@ -66,6 +72,12 @@ func (rd *rdParser) backup() {
 		panic("Cannot call backup() twice without intevening next()")
 	}
 	rd.hold = true
+}
+
+func (rd *rdParser) peek() item {
+	i := rd.next()
+	rd.backup()
+	return i
 }
 
 func (rd rdParser) line() int {
@@ -268,5 +280,100 @@ func (rd *rdParser) maybeAssign() (*Expr, error) {
 
 // expr parses a single expression.
 func (rd *rdParser) expr() (*Expr, error) {
-	return &Expr{}, nil
+	return rd.exprPrec(PREC_NONE)
+}
+
+// exprPrec parses an expression at the given precedence or lower.
+func (rd *rdParser) exprPrec(prec precedence) (*Expr, error) {
+	i := rd.peek()
+	pp, ok := prefixParslets[i.typ]
+	if !ok {
+		return nil, fmt.Errorf("Trying to parse expression; got %s(%s)", i.val, typName(i.typ))
+	}
+
+	left, err := pp(rd)
+	if err != nil {
+		return nil, err
+	}
+	return left, nil
+}
+
+// argExprs parses argument expressions, up to and including the
+// closing ')'. It assumes the opening paren has already been
+// consumed.
+func (rd *rdParser) argExprs() ([]*Expr, error) {
+	es := []*Expr{}
+
+	for {
+		if rd.peek().typ == ')' {
+			break
+		}
+		e, err := rd.expr()
+		if err != nil {
+			return nil, err
+		}
+		es = append(es, e)
+	}
+	rd.next() // consume the closing paren
+	return es, nil
+}
+
+// --------------- prefix parslets ---------------------------------------
+
+type prefixParslet func(*rdParser) (*Expr, error)
+
+var prefixParslets map[int]prefixParslet
+
+// exprObjectId parses an expression beginning with an objectId.
+func exprObjectId(rd *rdParser) (*Expr, error) {
+	var err error
+	i := rd.next()
+	e := &Expr{Text: i.val, Base: Base{Line: rd.line()}}
+
+	i = rd.next()
+
+	switch i.typ {
+	case ASSIGN:
+		e.Op = Assign
+		e.Left, err = rd.expr()
+		if err != nil {
+			return nil, err
+		}
+		e.Line = e.Left.Line
+	case '(':
+		e.Op = Dispatch
+		es, err := rd.argExprs()
+		if err != nil {
+			return nil, err
+		}
+		e.Exprs = es
+		e.Left = &Expr{Op: Object, Text: "self", Base: Base{Line: e.Line}}
+		e.Line = rd.line()
+	default:
+		rd.backup()
+		e.Op = Object
+	}
+
+	return e, nil
+}
+
+func exprNumStringBool(rd *rdParser) (*Expr, error) {
+	i := rd.next()
+	switch i.typ {
+	case NUM:
+		return &Expr{Op: IntConst, Text: i.val, Base: Base{Line: rd.line()}}, nil
+	case STRING:
+		return &Expr{Op: StringConst, Text: unescapeString(i.val), Base: Base{Line: rd.line()}}, nil
+	case BOOL:
+		return &Expr{Op: BoolConst, Text: i.val, Base: Base{Line: rd.line()}}, nil
+	}
+	panic(fmt.Sprintf("exprNumStringBool: expected num/string/bool; ; got %s(%s)", i.val, typName(i.typ)))
+}
+
+func init() {
+	prefixParslets = make(map[int]prefixParslet)
+	prefixParslets[OBJECTID] = exprObjectId
+	prefixParslets[NUM] = exprNumStringBool
+	prefixParslets[STRING] = exprNumStringBool
+	prefixParslets[BOOL] = exprNumStringBool
 }
