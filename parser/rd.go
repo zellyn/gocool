@@ -40,6 +40,17 @@ type precedence int
 
 const (
 	PREC_NONE precedence = iota
+	PREC_IN
+	PREC_ASSIGN
+	PREC_NOT
+	PREC_CMP
+	PREC_ADD
+	PREC_MUL
+	PREC_ISVOID
+	PREC_NEG
+	PREC_AT
+	PREC_DISPATCH
+	// TODO(zellyn): remove unused values.
 )
 
 func typName(i int) string {
@@ -285,7 +296,7 @@ func (rd *rdParser) expr() (*Expr, error) {
 
 // exprPrec parses an expression at the given precedence or lower.
 func (rd *rdParser) exprPrec(prec precedence) (*Expr, error) {
-	i := rd.peek()
+	i := rd.next()
 	pp, ok := prefixParslets[i.typ]
 	if !ok {
 		return nil, fmt.Errorf("Trying to parse expression; got %s(%s)", i.val, typName(i.typ))
@@ -295,7 +306,24 @@ func (rd *rdParser) exprPrec(prec precedence) (*Expr, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	for prec < rd.getPrecedence() {
+		i = rd.next()
+		ip := infixParslets[i.typ].parslet
+		left, err = ip(rd, left)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return left, nil
+}
+
+// getPrecedence returns the precedence of the next operator, if
+// known, or PREC_NONE.
+func (rd *rdParser) getPrecedence() precedence {
+	i := rd.peek()
+	return infixParslets[i.typ].prec
 }
 
 // argExprs parses argument expressions, up to and including the
@@ -324,10 +352,10 @@ type prefixParslet func(*rdParser) (*Expr, error)
 
 var prefixParslets map[int]prefixParslet
 
-// exprObjectId parses an expression beginning with an objectId.
-func exprObjectId(rd *rdParser) (*Expr, error) {
+// exprPrefixObjectId parses an expression beginning with an objectId.
+func exprPrefixObjectId(rd *rdParser) (*Expr, error) {
 	var err error
-	i := rd.next()
+	i := rd.i
 	e := &Expr{Text: i.val, Base: Base{Line: rd.line()}}
 
 	i = rd.next()
@@ -357,8 +385,9 @@ func exprObjectId(rd *rdParser) (*Expr, error) {
 	return e, nil
 }
 
-func exprNumStringBool(rd *rdParser) (*Expr, error) {
-	i := rd.next()
+// exprPrefixNumStringBool parses a number, string or bool.
+func exprPrefixNumStringBool(rd *rdParser) (*Expr, error) {
+	i := rd.i
 	switch i.typ {
 	case NUM:
 		return &Expr{Op: IntConst, Text: i.val, Base: Base{Line: rd.line()}}, nil
@@ -370,10 +399,98 @@ func exprNumStringBool(rd *rdParser) (*Expr, error) {
 	panic(fmt.Sprintf("exprNumStringBool: expected num/string/bool; ; got %s(%s)", i.val, typName(i.typ)))
 }
 
+// exprPrefixNeg parses a negation expression (~)
+func exprPrefixNeg(rd *rdParser) (*Expr, error) {
+	e, err := rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	return &Expr{Op: Neg, Left: e, Text: "~", Base: Base{Line: e.Line}}, nil
+}
+
+// exprPrefixParenthesized parses a parenthesized expression.
+func exprPrefixParenthesized(rd *rdParser) (*Expr, error) {
+	e, err := rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i := rd.next()
+	if i.typ != ')' {
+		return nil, fmt.Errorf("Parenthesized expression should end with ')'; got %s(%s)", i.val, typName(i.typ))
+	}
+
+	e.Line = rd.line()
+	return e, nil
+}
+
+// exprPrefixExprList handles braced lists of expressions. The '{' has
+// already been consumed.
+func exprPrefixExprList(rd *rdParser) (*Expr, error) {
+	var es []*Expr
+
+	for {
+		i := rd.peek()
+		if i.typ == '}' {
+			return &Expr{Op: Block, Exprs: es, Base: Base{Line: rd.line()}}, nil
+		}
+
+		e, err := rd.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		es = append(es, e)
+	}
+}
+
+// --------------- infix parslets ----------------------------------------
+
+type infixParslet func(*rdParser, *Expr) (*Expr, error)
+
+type infixInfo struct {
+	parslet infixParslet
+	prec    precedence
+}
+
+var infixParslets map[int]infixInfo
+
+// exprInfixDispatch handles normal dispatch with explicit object expression.
+func exprInfixDispatch(rd *rdParser, left *Expr) (*Expr, error) {
+	e := &Expr{Op: Dispatch, Left: left}
+	i := rd.next()
+	if i.typ != OBJECTID {
+		return nil, fmt.Errorf("Dispatch expects method name after dot; got %s(%s)", i.val, typName(i.typ))
+	}
+	e.Text = i.val
+	i = rd.next()
+	if i.typ != '(' {
+		return nil, fmt.Errorf("Dispatch expecting opening paren; got %s(%s)", i.val, typName(i.typ))
+	}
+	es, err := rd.argExprs()
+	if err != nil {
+		return nil, err
+	}
+	e.Exprs = es
+	e.Line = rd.line()
+	return e, nil
+}
+
+// --------------- set up parslet maps -----------------------------------
 func init() {
-	prefixParslets = make(map[int]prefixParslet)
-	prefixParslets[OBJECTID] = exprObjectId
-	prefixParslets[NUM] = exprNumStringBool
-	prefixParslets[STRING] = exprNumStringBool
-	prefixParslets[BOOL] = exprNumStringBool
+	prefixParslets = map[int]prefixParslet{
+		OBJECTID: exprPrefixObjectId,
+		NUM:      exprPrefixNumStringBool,
+		STRING:   exprPrefixNumStringBool,
+		BOOL:     exprPrefixNumStringBool,
+		'~':      exprPrefixNeg,
+		'(':      exprPrefixParenthesized,
+		'{':      exprPrefixExprList,
+	}
+
+	infixParslets = map[int]infixInfo{
+		'.': {
+			exprInfixDispatch,
+			PREC_DISPATCH,
+		},
+	}
 }
