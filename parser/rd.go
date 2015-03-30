@@ -63,6 +63,14 @@ func typName(i int) string {
 	return fmt.Sprintf("unknown_%d", i)
 }
 
+func typDebug(i item) string {
+	name := typName(i.typ)
+	if "'"+i.val+"'" == name {
+		return name
+	}
+	return fmt.Sprintf("%s(%s)", i.val, typName(i.typ))
+}
+
 type rdParser struct {
 	l    *lexer
 	i    item
@@ -140,7 +148,7 @@ func (rd *rdParser) class() (*Class, error) {
 
 	i := rd.next()
 	if i.typ != TYPEID {
-		return nil, fmt.Errorf("Classes should start with a classname; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Classes should start with a classname; got %s", typDebug(i))
 	}
 	cl.Name = i.val
 
@@ -149,14 +157,14 @@ func (rd *rdParser) class() (*Class, error) {
 	if i.typ == INHERITS {
 		i = rd.next()
 		if i.typ != TYPEID {
-			return nil, fmt.Errorf("inherits should be followed with a classname; got %s(%s)", i.val, typName(i.typ))
+			return nil, fmt.Errorf("inherits should be followed with a classname; got %s", typDebug(i))
 		}
 		cl.Parent = i.val
 		i = rd.next()
 	}
 
 	if i.typ != '{' {
-		return nil, fmt.Errorf("Class bodies start with an opening brace; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Class bodies start with an opening brace; got %s", typDebug(i))
 
 	}
 
@@ -175,7 +183,7 @@ func (rd *rdParser) class() (*Class, error) {
 
 	i = rd.next()
 	if i.typ != ';' {
-		return nil, fmt.Errorf("Class definitions should end with a semicolon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Class definitions should end with a semicolon; got %s", typDebug(i))
 	}
 	cl.Line = rd.line()
 	return cl, nil
@@ -188,7 +196,7 @@ func (rd *rdParser) feature() (*Feature, error) {
 
 	i := rd.next()
 	if i.typ != OBJECTID {
-		return nil, fmt.Errorf("Feature definitions should start with an OBJECTID; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Feature definitions should start with an OBJECTID; got %s", typDebug(i))
 	}
 
 	objectId := i.val
@@ -204,7 +212,7 @@ func (rd *rdParser) feature() (*Feature, error) {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("Feature names should be followed by '(' or ':'; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Feature names should be followed by '(' or ':'; got %s", typDebug(i))
 	}
 
 	return f, nil
@@ -215,7 +223,7 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 	a := &Attr{Name: name}
 	i := rd.next()
 	if i.typ != TYPEID {
-		return nil, fmt.Errorf("Attribute definitions expect type after colon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Attribute definitions expect type after colon; got %s", typDebug(i))
 	}
 	a.Type = i.val
 	var err error
@@ -224,7 +232,7 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 	}
 	i = rd.next()
 	if i.typ != ';' {
-		return nil, fmt.Errorf("Attribute definitions end with semicolon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Attribute definitions end with semicolon; got %s", typDebug(i))
 	}
 	a.Line = rd.line()
 	return a, nil
@@ -241,23 +249,36 @@ func (rd *rdParser) method(name string) (*Method, error) {
 		if i.typ == ')' {
 			break
 		}
+		f := &Formal{}
 		if i.typ != OBJECTID {
-			return nil, fmt.Errorf("Parsing formals of %s, expected OBJECTID; got %s(%s)", m.Name, i.val, typName(i.typ))
+			return nil, fmt.Errorf("Parsing formals of %s, expected OBJECTID; got %s", m.Name, typDebug(i))
 		}
+		f.Name = i.val
+		i = rd.next()
+		if i.typ != ':' {
+			return nil, fmt.Errorf("Parsing formals of %s, expected colon; got %s", m.Name, typDebug(i))
+		}
+		i = rd.next()
+		if i.typ != TYPEID {
+			return nil, fmt.Errorf("Parsing formals of %s, expected type name after colon; got %s", m.Name, typDebug(i))
+		}
+		f.Type = i.val
+		f.Line = rd.line()
+		m.Formals = append(m.Formals, f)
 	}
 	i := rd.next()
 	if i.typ != ':' {
-		return nil, fmt.Errorf("Method definitions expecting colon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Method definitions expecting colon; got %s", typDebug(i))
 	}
 	i = rd.next()
 	if i.typ != TYPEID {
-		return nil, fmt.Errorf("Method definition expecting type after colon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Method definition expecting type after colon; got %s", typDebug(i))
 	}
 	m.Type = i.val
 
 	i = rd.next()
 	if i.typ != '{' {
-		return nil, fmt.Errorf("Method definition expecting opening brace; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Method definition expecting opening brace; got %s", typDebug(i))
 	}
 
 	m.Expr, err = rd.expr()
@@ -267,12 +288,12 @@ func (rd *rdParser) method(name string) (*Method, error) {
 
 	i = rd.next()
 	if i.typ != '}' {
-		return nil, fmt.Errorf("Method definition expecting closing brace; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Method definition expecting closing brace; got %s", typDebug(i))
 	}
 
 	i = rd.next()
 	if i.typ != ';' {
-		return nil, fmt.Errorf("Method definitions end with semicolon; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Method definitions end with semicolon; got %s", typDebug(i))
 	}
 	m.Line = rd.line()
 	return m, nil
@@ -299,7 +320,7 @@ func (rd *rdParser) exprPrec(prec precedence) (*Expr, error) {
 	i := rd.next()
 	pp, ok := prefixParslets[i.typ]
 	if !ok {
-		return nil, fmt.Errorf("Trying to parse expression; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Trying to parse expression; got %s", typDebug(i))
 	}
 
 	left, err := pp(rd)
@@ -396,7 +417,7 @@ func exprPrefixNumStringBool(rd *rdParser) (*Expr, error) {
 	case BOOL:
 		return &Expr{Op: BoolConst, Text: i.val, Base: Base{Line: rd.line()}}, nil
 	}
-	panic(fmt.Sprintf("exprNumStringBool: expected num/string/bool; ; got %s(%s)", i.val, typName(i.typ)))
+	panic(fmt.Sprintf("exprNumStringBool: expected num/string/bool; ; got %s", typDebug(i)))
 }
 
 // exprPrefixNeg parses a negation expression (~)
@@ -408,6 +429,15 @@ func exprPrefixNeg(rd *rdParser) (*Expr, error) {
 	return &Expr{Op: Neg, Left: e, Text: "~", Base: Base{Line: e.Line}}, nil
 }
 
+// exprPrefixNot parses a not (complement) expression
+func exprPrefixNot(rd *rdParser) (*Expr, error) {
+	e, err := rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	return &Expr{Op: Comp, Left: e, Base: Base{Line: e.Line}}, nil
+}
+
 // exprPrefixParenthesized parses a parenthesized expression.
 func exprPrefixParenthesized(rd *rdParser) (*Expr, error) {
 	e, err := rd.expr()
@@ -416,7 +446,7 @@ func exprPrefixParenthesized(rd *rdParser) (*Expr, error) {
 	}
 	i := rd.next()
 	if i.typ != ')' {
-		return nil, fmt.Errorf("Parenthesized expression should end with ')'; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Parenthesized expression should end with ')'; got %s", typDebug(i))
 	}
 
 	e.Line = rd.line()
@@ -427,19 +457,21 @@ func exprPrefixParenthesized(rd *rdParser) (*Expr, error) {
 // already been consumed.
 func exprPrefixExprList(rd *rdParser) (*Expr, error) {
 	var es []*Expr
-
 	for {
 		i := rd.peek()
 		if i.typ == '}' {
+			rd.next()
 			return &Expr{Op: Block, Exprs: es, Base: Base{Line: rd.line()}}, nil
 		}
-
 		e, err := rd.expr()
 		if err != nil {
 			return nil, err
 		}
-
 		es = append(es, e)
+		i = rd.next()
+		if i.typ != ';' {
+			return nil, fmt.Errorf("Expression should end with semicolon; got %s", typDebug(i))
+		}
 	}
 }
 
@@ -459,12 +491,12 @@ func exprInfixDispatch(rd *rdParser, left *Expr) (*Expr, error) {
 	e := &Expr{Op: Dispatch, Left: left}
 	i := rd.next()
 	if i.typ != OBJECTID {
-		return nil, fmt.Errorf("Dispatch expects method name after dot; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Dispatch expects method name after dot; got %s", typDebug(i))
 	}
 	e.Text = i.val
 	i = rd.next()
 	if i.typ != '(' {
-		return nil, fmt.Errorf("Dispatch expecting opening paren; got %s(%s)", i.val, typName(i.typ))
+		return nil, fmt.Errorf("Dispatch expecting opening paren; got %s", typDebug(i))
 	}
 	es, err := rd.argExprs()
 	if err != nil {
@@ -475,6 +507,59 @@ func exprInfixDispatch(rd *rdParser, left *Expr) (*Expr, error) {
 	return e, nil
 }
 
+// exprInfixStaticDispatch handles static dispatch.
+func exprInfixStaticDispatch(rd *rdParser, left *Expr) (*Expr, error) {
+	e := &Expr{Op: StaticDispatch, Left: left}
+	i := rd.next()
+	if i.typ != TYPEID {
+		return nil, fmt.Errorf("Static dispatch expects type name after @; got %s", typDebug(i))
+	}
+	e.InternalType = i.val
+	i = rd.next()
+	if i.typ != '.' {
+		return nil, fmt.Errorf("Static dispatch expects period after type name; got %s", typDebug(i))
+	}
+	i = rd.next()
+	if i.typ != OBJECTID {
+		return nil, fmt.Errorf("Static dispatch expects method name after dot; got %s", typDebug(i))
+	}
+	e.Text = i.val
+	i = rd.next()
+	if i.typ != '(' {
+		return nil, fmt.Errorf("Static dispatch expecting opening paren; got %s", typDebug(i))
+	}
+	es, err := rd.argExprs()
+	if err != nil {
+		return nil, err
+	}
+	e.Exprs = es
+	e.Line = rd.line()
+	return e, nil
+}
+
+func operator(typ int, op ExprOp, prec precedence, parslets map[int]infixInfo) {
+	f := func(rd *rdParser, left *Expr) (*Expr, error) {
+		line := rd.line()
+		right, err := rd.expr()
+		if err != nil {
+			return nil, err
+		}
+		return &Expr{Op: op, Left: left, Text: string(typ), Right: right, Base: Base{Line: line}}, nil
+	}
+	parslets[typ] = infixInfo{parslet: f, prec: prec}
+}
+
+// exprInfixCmp parses a comparison expression.
+func exprInfixCmp(rd *rdParser, left *Expr) (*Expr, error) {
+	line := rd.line()
+	op := OpForCmp(rd.i.val)
+	right, err := rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	return &Expr{Op: op, Left: left, Right: right, Base: Base{Line: line}}, nil
+}
+
 // --------------- set up parslet maps -----------------------------------
 func init() {
 	prefixParslets = map[int]prefixParslet{
@@ -482,6 +567,7 @@ func init() {
 		NUM:      exprPrefixNumStringBool,
 		STRING:   exprPrefixNumStringBool,
 		BOOL:     exprPrefixNumStringBool,
+		NOT:      exprPrefixNot,
 		'~':      exprPrefixNeg,
 		'(':      exprPrefixParenthesized,
 		'{':      exprPrefixExprList,
@@ -492,5 +578,18 @@ func init() {
 			exprInfixDispatch,
 			PREC_DISPATCH,
 		},
+		'@': {
+			exprInfixStaticDispatch,
+			PREC_AT,
+		},
+		CMP: {
+			exprInfixCmp,
+			PREC_CMP,
+		},
 	}
+
+	operator('+', Plus, PREC_ADD, infixParslets)
+	operator('-', Sub, PREC_ADD, infixParslets)
+	operator('*', Mul, PREC_MUL, infixParslets)
+	operator('/', Divide, PREC_MUL, infixParslets)
 }
