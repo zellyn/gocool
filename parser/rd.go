@@ -406,6 +406,55 @@ func exprPrefixObjectId(rd *rdParser) (*Expr, error) {
 	return e, nil
 }
 
+// exprPrefixLet parses a let expression.
+func exprPrefixLet(rd *rdParser) (*Expr, error) {
+	bindings, err := rd.bindings()
+	if err != nil {
+		return nil, err
+	}
+	e, err := rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	return MakeLet(bindings, e), nil
+}
+
+// bindings parses a set of "let" bindings, consuming the IN token
+// before returning.
+func (rd *rdParser) bindings() ([]*Expr, error) {
+	es := []*Expr{}
+
+	for {
+		line := rd.line()
+		i := rd.next()
+		if i.typ != OBJECTID {
+			return nil, fmt.Errorf("Bindings should start with object name; got %s", typDebug(i))
+		}
+		e := &Expr{Op: Placeholder, Text: i.val, Base: Base{Line: line}}
+		i = rd.next()
+		if i.typ != ':' {
+			return nil, fmt.Errorf("Bindings expect colon after name; got %s", typDebug(i))
+		}
+		i = rd.next()
+		if i.typ != TYPEID {
+			return nil, fmt.Errorf("Bindings expect type after colon; got %s", typDebug(i))
+		}
+		e.Type = i.val
+		var err error
+		if e.Left, err = rd.maybeAssign(); err != nil {
+			return nil, err
+		}
+		es = append(es, e)
+		i = rd.next()
+		if i.typ == IN {
+			return es, nil
+		}
+		if i.typ != ',' {
+			return nil, fmt.Errorf("Binding can be followed by comma, or IN; got %s", typDebug(i))
+		}
+	}
+}
+
 // exprPrefixNumStringBool parses a number, string or bool.
 func exprPrefixNumStringBool(rd *rdParser) (*Expr, error) {
 	i := rd.i
@@ -422,7 +471,7 @@ func exprPrefixNumStringBool(rd *rdParser) (*Expr, error) {
 
 // exprPrefixNeg parses a negation expression (~)
 func exprPrefixNeg(rd *rdParser) (*Expr, error) {
-	e, err := rd.expr()
+	e, err := rd.exprPrec(PREC_NEG)
 	if err != nil {
 		return nil, err
 	}
@@ -431,11 +480,20 @@ func exprPrefixNeg(rd *rdParser) (*Expr, error) {
 
 // exprPrefixNot parses a not (complement) expression
 func exprPrefixNot(rd *rdParser) (*Expr, error) {
-	e, err := rd.expr()
+	e, err := rd.exprPrec(PREC_NOT)
 	if err != nil {
 		return nil, err
 	}
 	return &Expr{Op: Comp, Left: e, Base: Base{Line: e.Line}}, nil
+}
+
+// exprPrefixIsvoid parses an isvoid expression
+func exprPrefixIsvoid(rd *rdParser) (*Expr, error) {
+	e, err := rd.exprPrec(PREC_ISVOID)
+	if err != nil {
+		return nil, err
+	}
+	return &Expr{Op: Isvoid, Left: e, Base: Base{Line: e.Line}}, nil
 }
 
 // exprPrefixParenthesized parses a parenthesized expression.
@@ -540,7 +598,7 @@ func exprInfixStaticDispatch(rd *rdParser, left *Expr) (*Expr, error) {
 func operator(typ int, op ExprOp, prec precedence, parslets map[int]infixInfo) {
 	f := func(rd *rdParser, left *Expr) (*Expr, error) {
 		line := rd.line()
-		right, err := rd.expr()
+		right, err := rd.exprPrec(prec)
 		if err != nil {
 			return nil, err
 		}
@@ -553,7 +611,7 @@ func operator(typ int, op ExprOp, prec precedence, parslets map[int]infixInfo) {
 func exprInfixCmp(rd *rdParser, left *Expr) (*Expr, error) {
 	line := rd.line()
 	op := OpForCmp(rd.i.val)
-	right, err := rd.expr()
+	right, err := rd.exprPrec(PREC_CMP)
 	if err != nil {
 		return nil, err
 	}
@@ -568,6 +626,8 @@ func init() {
 		STRING:   exprPrefixNumStringBool,
 		BOOL:     exprPrefixNumStringBool,
 		NOT:      exprPrefixNot,
+		ISVOID:   exprPrefixIsvoid,
+		LET:      exprPrefixLet,
 		'~':      exprPrefixNeg,
 		'(':      exprPrefixParenthesized,
 		'{':      exprPrefixExprList,
