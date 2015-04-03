@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 )
 
 var typNames = map[int]string{
@@ -72,9 +74,11 @@ func typDebug(i item) string {
 }
 
 type rdParser struct {
-	l    *lexer
-	i    item
-	hold bool
+	l      *lexer
+	i      item
+	hold   bool
+	logbuf *bytes.Buffer
+	log    *log.Logger
 }
 
 func (rd *rdParser) next() item {
@@ -107,11 +111,15 @@ func (rd rdParser) filename() string {
 	return rd.l.name
 }
 
-func RdParse(filename, text string) (*Program, error) {
+func RdParse(filename, text string) (prog *Program, logs string, err error) {
+
 	rd := &rdParser{
-		l: newLex(filename, text),
+		l:      newLex(filename, text),
+		logbuf: &bytes.Buffer{},
 	}
-	return rd.program()
+	rd.log = log.New(rd.logbuf, "logger: ", log.Lshortfile)
+	prog, err = rd.program()
+	return prog, rd.logbuf.String(), err
 }
 
 // program parses and returns an entire COOL program.
@@ -265,6 +273,14 @@ func (rd *rdParser) method(name string) (*Method, error) {
 		f.Type = i.val
 		f.Line = rd.line()
 		m.Formals = append(m.Formals, f)
+
+		i = rd.next()
+		if i.typ == ')' {
+			break
+		}
+		if i.typ != ',' {
+			return nil, fmt.Errorf("Parsing formals of %s, comma or close paren after formal; got %s", m.Name, typDebug(i))
+		}
 	}
 	i := rd.next()
 	if i.typ != ':' {

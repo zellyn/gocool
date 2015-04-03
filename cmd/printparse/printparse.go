@@ -12,6 +12,7 @@ import (
 )
 
 var recursiveDescent = flag.Bool("rd", false, "use recursive descent parser")
+var printLog = flag.Bool("log", false, "print debug log")
 
 func main() {
 	flag.Parse()
@@ -27,10 +28,14 @@ func main() {
 	_, filename := path.Split(fullFilename)
 
 	var prog *parser.Program
+	var logs string
 	if *recursiveDescent {
-		prog, err = parser.RdParse(filename, string(contents))
+		prog, logs, err = parser.RdParse(filename, string(contents))
 	} else {
 		prog, err = parser.Parse(filename, string(contents))
+	}
+	if *printLog && logs != "" {
+		fmt.Println(logs)
 	}
 	if err != nil {
 		fmt.Println(err)
