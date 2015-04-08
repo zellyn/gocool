@@ -79,6 +79,20 @@ type rdParser struct {
 	hold   bool
 	logbuf *bytes.Buffer
 	log    *log.Logger
+	depth  int
+}
+
+func (rd *rdParser) indent() {
+	rd.depth++
+}
+
+func (rd *rdParser) dedent() {
+	rd.depth--
+}
+
+func (rd *rdParser) logf(format string, v ...interface{}) {
+	prefix := fmt.Sprintf("%*s", rd.depth, "")
+	rd.log.Printf(prefix+format, v...)
 }
 
 func (rd *rdParser) next() item {
@@ -248,10 +262,15 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 
 // method parses a method definition, picking up after the opening paren.
 func (rd *rdParser) method(name string) (*Method, error) {
+	rd.logf("method(%q)", name)
+	rd.indent()
+	defer rd.dedent()
 	m := &Method{Name: name}
 	var err error
 
 	// Parse formals
+	rd.logf("formals")
+	rd.indent()
 	for {
 		i := rd.next()
 		if i.typ == ')' {
@@ -273,6 +292,7 @@ func (rd *rdParser) method(name string) (*Method, error) {
 		f.Type = i.val
 		f.Line = rd.line()
 		m.Formals = append(m.Formals, f)
+		rd.logf("%s: %s", f.Name, f.Type)
 
 		i = rd.next()
 		if i.typ == ')' {
@@ -282,6 +302,8 @@ func (rd *rdParser) method(name string) (*Method, error) {
 			return nil, fmt.Errorf("Parsing formals of %s, comma or close paren after formal; got %s", m.Name, typDebug(i))
 		}
 	}
+	rd.dedent()
+	rd.logf("/formals")
 	i := rd.next()
 	if i.typ != ':' {
 		return nil, fmt.Errorf("Method definitions expecting colon; got %s", typDebug(i))
@@ -328,6 +350,9 @@ func (rd *rdParser) maybeAssign() (*Expr, error) {
 
 // expr parses a single expression.
 func (rd *rdParser) expr() (*Expr, error) {
+	rd.logf("expr (%s)", typDebug(rd.peek()))
+	rd.indent()
+	defer rd.dedent()
 	return rd.exprPrec(PREC_NONE)
 }
 
@@ -367,11 +392,22 @@ func (rd *rdParser) getPrecedence() precedence {
 // closing ')'. It assumes the opening paren has already been
 // consumed.
 func (rd *rdParser) argExprs() ([]*Expr, error) {
+	rd.logf("argExprs")
+	rd.indent()
+	defer rd.logf("/argExprs")
+	defer rd.dedent()
+
 	es := []*Expr{}
 
 	for {
 		if rd.peek().typ == ')' {
 			break
+		}
+		if len(es) > 0 {
+			i := rd.next()
+			if i.typ != ',' {
+				return nil, fmt.Errorf("Dispatch arguments should be separated by commas; got %s", typDebug(i))
+			}
 		}
 		e, err := rd.expr()
 		if err != nil {
@@ -394,6 +430,10 @@ func exprPrefixObjectId(rd *rdParser) (*Expr, error) {
 	var err error
 	i := rd.i
 	e := &Expr{Text: i.val, Base: Base{Line: rd.line()}}
+	rd.logf("objectid: %s", i.val)
+	rd.indent()
+	defer rd.logf("/objectid")
+	defer rd.dedent()
 
 	i = rd.next()
 
