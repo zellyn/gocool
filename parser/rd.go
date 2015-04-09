@@ -148,6 +148,7 @@ LOOP:
 		case CLASS:
 			if cl, err := rd.class(); err == nil {
 				p.Classes = append(p.Classes, cl)
+				p.Line = cl.Line
 			} else {
 				return nil, err
 			}
@@ -158,7 +159,6 @@ LOOP:
 	if len(p.Classes) == 0 {
 		return nil, errors.New("No classes found.")
 	}
-	p.Line = p.Classes[0].Line
 	return p, nil
 }
 
@@ -475,6 +475,136 @@ func exprPrefixLet(rd *rdParser) (*Expr, error) {
 	return MakeLet(bindings, e), nil
 }
 
+// exprPrefixNew parses a new expression.
+func exprPrefixNew(rd *rdParser) (*Expr, error) {
+	e := &Expr{Op: New}
+	i := rd.next()
+	if i.typ != TYPEID {
+		return nil, fmt.Errorf("new expects type name; got %s", typDebug(i))
+	}
+	e.InternalType = i.val
+	e.Line = rd.line()
+	return e, nil
+}
+
+// exprPrefixWhile parses a while loop expression.
+func exprPrefixWhile(rd *rdParser) (*Expr, error) {
+	e := &Expr{Op: Loop}
+	var err error
+	e.Left, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i := rd.next()
+	if i.typ != LOOP {
+		return nil, fmt.Errorf("while expects 'loop' after condition; got %s", typDebug(i))
+	}
+	e.Right, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i = rd.next()
+	if i.typ != POOL {
+		return nil, fmt.Errorf("while expects 'pool' after body; got %s", typDebug(i))
+	}
+	e.Line = rd.line()
+	return e, nil
+}
+
+// exprPrefixCase parses a case expression.
+func exprPrefixCase(rd *rdParser) (*Expr, error) {
+	e := &Expr{Op: TypCase}
+	var err error
+	e.Left, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i := rd.next()
+	if i.typ != OF {
+		return nil, fmt.Errorf("case expects 'of' after first expression; got %s", typDebug(i))
+	}
+
+	// parse branches of case statement
+	for {
+		i = rd.next()
+
+		if i.typ == ESAC {
+			break
+		}
+
+		b := &Expr{Op: Branch}
+
+		if i.typ != OBJECTID {
+			return nil, fmt.Errorf("case branch should start with variable name; got %s", typDebug(i))
+		}
+		b.Text = i.val
+
+		i = rd.next()
+		if i.typ != ':' {
+			return nil, fmt.Errorf("case branch expects colon after variable name; got %s", typDebug(i))
+		}
+
+		i = rd.next()
+		if i.typ != TYPEID {
+			return nil, fmt.Errorf("case branch expects type after colon; got %s", typDebug(i))
+		}
+		b.Type = i.val
+
+		i = rd.next()
+		if i.typ != DARROW {
+			return nil, fmt.Errorf("case branch expects '=>' after type; got %s", typDebug(i))
+		}
+
+		var err error
+		b.Left, err = rd.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		i = rd.next()
+		if i.typ != ';' {
+			return nil, fmt.Errorf("case branch ends with semicolon; got %s", typDebug(i))
+		}
+		b.Line = rd.line()
+		e.Exprs = append(e.Exprs, b)
+	}
+
+	e.Line = rd.line()
+	return e, nil
+}
+
+// exprPrefixIf parses an if expression
+func exprPrefixIf(rd *rdParser) (*Expr, error) {
+	e := &Expr{Op: Cond}
+	var err error
+	e.Left, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i := rd.next()
+	if i.typ != THEN {
+		return nil, fmt.Errorf("if expects 'then' after condition; got %s", typDebug(i))
+	}
+	e.Right, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i = rd.next()
+	if i.typ != ELSE {
+		return nil, fmt.Errorf("if expects 'else' after first expression; got %s", typDebug(i))
+	}
+	e.Else, err = rd.expr()
+	if err != nil {
+		return nil, err
+	}
+	i = rd.next()
+	if i.typ != FI {
+		return nil, fmt.Errorf("if expects closing 'fi'; got %s", typDebug(i))
+	}
+	e.Line = rd.line()
+	return e, nil
+}
+
 // bindings parses a set of "let" bindings, consuming the IN token
 // before returning.
 func (rd *rdParser) bindings() ([]*Expr, error) {
@@ -684,6 +814,10 @@ func init() {
 		NOT:      exprPrefixNot,
 		ISVOID:   exprPrefixIsvoid,
 		LET:      exprPrefixLet,
+		WHILE:    exprPrefixWhile,
+		IF:       exprPrefixIf,
+		NEW:      exprPrefixNew,
+		CASE:     exprPrefixCase,
 		'~':      exprPrefixNeg,
 		'(':      exprPrefixParenthesized,
 		'{':      exprPrefixExprList,
