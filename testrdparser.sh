@@ -21,7 +21,7 @@ echo "---- BAD INPUT ----"
 for i in $BAD_FILES
 do
     echo "### $i"
-    ./printparse testdata/parse/$i.test > $OUTDIR/$i.test.out || true
+    ./printparse -rd testdata/parse/$i.test > $OUTDIR/$i.test.out || true
     cmp -s testdata/parse/$i.test.out $OUTDIR/$i.test.out || diff -u testdata/parse/$i.test.out $OUTDIR/$i.test.out
 done
 
