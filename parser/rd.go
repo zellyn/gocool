@@ -74,12 +74,13 @@ func typDebug(i item) string {
 }
 
 type rdParser struct {
-	l      *lexer
-	i      item
-	hold   bool
-	logbuf *bytes.Buffer
-	log    *log.Logger
-	depth  int
+	l          *lexer
+	i          item
+	hold       bool
+	logbuf     *bytes.Buffer
+	log        *log.Logger
+	depth      int
+	parseError bool
 }
 
 func (rd *rdParser) indent() {
@@ -93,6 +94,10 @@ func (rd *rdParser) dedent() {
 func (rd *rdParser) logf(format string, v ...interface{}) {
 	prefix := fmt.Sprintf("%*s", rd.depth, "")
 	rd.log.Printf(prefix+format, v...)
+}
+
+func (rd *rdParser) error(e string) {
+	fmt.Printf("%q, line %d: %s at or near %s\n", rd.l.name, rd.l.lineNumber(), e, printItem(rd.l.lastItem, true))
 }
 
 func (rd *rdParser) next() item {
@@ -133,7 +138,11 @@ func RdParse(filename, text string) (prog *Program, logs string, err error) {
 	}
 	rd.log = log.New(rd.logbuf, "logger: ", log.Lshortfile)
 	prog, err = rd.program()
-	return prog, rd.logbuf.String(), err
+	if err != nil || rd.parseError {
+		// fmt.Println(err) // xyzzy
+		return nil, rd.logbuf.String(), errors.New("Compilation halted due to lex and parse errors")
+	}
+	return prog, rd.logbuf.String(), nil
 }
 
 // program parses and returns an entire COOL program.
@@ -153,10 +162,12 @@ LOOP:
 				return nil, err
 			}
 		default:
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Unexpected token: want CLASS; got %s", typName(i.typ))
 		}
 	}
 	if len(p.Classes) == 0 {
+		rd.error("syntax error")
 		return nil, errors.New("No classes found.")
 	}
 	return p, nil
@@ -170,6 +181,7 @@ func (rd *rdParser) class() (*Class, error) {
 
 	i := rd.next()
 	if i.typ != TYPEID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Classes should start with a classname; got %s", typDebug(i))
 	}
 	cl.Name = i.val
@@ -179,6 +191,7 @@ func (rd *rdParser) class() (*Class, error) {
 	if i.typ == INHERITS {
 		i = rd.next()
 		if i.typ != TYPEID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("inherits should be followed with a classname; got %s", typDebug(i))
 		}
 		cl.Parent = i.val
@@ -186,6 +199,7 @@ func (rd *rdParser) class() (*Class, error) {
 	}
 
 	if i.typ != '{' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Class bodies start with an opening brace; got %s", typDebug(i))
 
 	}
@@ -205,6 +219,7 @@ func (rd *rdParser) class() (*Class, error) {
 
 	i = rd.next()
 	if i.typ != ';' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Class definitions should end with a semicolon; got %s", typDebug(i))
 	}
 	cl.Line = rd.line()
@@ -218,6 +233,7 @@ func (rd *rdParser) feature() (*Feature, error) {
 
 	i := rd.next()
 	if i.typ != OBJECTID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Feature definitions should start with an OBJECTID; got %s", typDebug(i))
 	}
 
@@ -234,6 +250,7 @@ func (rd *rdParser) feature() (*Feature, error) {
 			return nil, err
 		}
 	default:
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Feature names should be followed by '(' or ':'; got %s", typDebug(i))
 	}
 
@@ -245,6 +262,7 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 	a := &Attr{Name: name}
 	i := rd.next()
 	if i.typ != TYPEID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Attribute definitions expect type after colon; got %s", typDebug(i))
 	}
 	a.Type = i.val
@@ -254,6 +272,7 @@ func (rd *rdParser) attr(name string) (*Attr, error) {
 	}
 	i = rd.next()
 	if i.typ != ';' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Attribute definitions end with semicolon; got %s", typDebug(i))
 	}
 	a.Line = rd.line()
@@ -278,15 +297,18 @@ func (rd *rdParser) method(name string) (*Method, error) {
 		}
 		f := &Formal{}
 		if i.typ != OBJECTID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Parsing formals of %s, expected OBJECTID; got %s", m.Name, typDebug(i))
 		}
 		f.Name = i.val
 		i = rd.next()
 		if i.typ != ':' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Parsing formals of %s, expected colon; got %s", m.Name, typDebug(i))
 		}
 		i = rd.next()
 		if i.typ != TYPEID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Parsing formals of %s, expected type name after colon; got %s", m.Name, typDebug(i))
 		}
 		f.Type = i.val
@@ -299,6 +321,7 @@ func (rd *rdParser) method(name string) (*Method, error) {
 			break
 		}
 		if i.typ != ',' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Parsing formals of %s, comma or close paren after formal; got %s", m.Name, typDebug(i))
 		}
 	}
@@ -306,16 +329,19 @@ func (rd *rdParser) method(name string) (*Method, error) {
 	rd.logf("/formals")
 	i := rd.next()
 	if i.typ != ':' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Method definitions expecting colon; got %s", typDebug(i))
 	}
 	i = rd.next()
 	if i.typ != TYPEID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Method definition expecting type after colon; got %s", typDebug(i))
 	}
 	m.Type = i.val
 
 	i = rd.next()
 	if i.typ != '{' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Method definition expecting opening brace; got %s", typDebug(i))
 	}
 
@@ -326,11 +352,13 @@ func (rd *rdParser) method(name string) (*Method, error) {
 
 	i = rd.next()
 	if i.typ != '}' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Method definition expecting closing brace; got %s", typDebug(i))
 	}
 
 	i = rd.next()
 	if i.typ != ';' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Method definitions end with semicolon; got %s", typDebug(i))
 	}
 	m.Line = rd.line()
@@ -361,6 +389,7 @@ func (rd *rdParser) exprPrec(prec precedence) (*Expr, error) {
 	i := rd.next()
 	pp, ok := prefixParslets[i.typ]
 	if !ok {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Trying to parse expression; got %s", typDebug(i))
 	}
 
@@ -406,6 +435,7 @@ func (rd *rdParser) argExprs() ([]*Expr, error) {
 		if len(es) > 0 {
 			i := rd.next()
 			if i.typ != ',' {
+				rd.error("syntax error")
 				return nil, fmt.Errorf("Dispatch arguments should be separated by commas; got %s", typDebug(i))
 			}
 		}
@@ -480,6 +510,7 @@ func exprPrefixNew(rd *rdParser) (*Expr, error) {
 	e := &Expr{Op: New}
 	i := rd.next()
 	if i.typ != TYPEID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("new expects type name; got %s", typDebug(i))
 	}
 	e.InternalType = i.val
@@ -497,6 +528,7 @@ func exprPrefixWhile(rd *rdParser) (*Expr, error) {
 	}
 	i := rd.next()
 	if i.typ != LOOP {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("while expects 'loop' after condition; got %s", typDebug(i))
 	}
 	e.Right, err = rd.expr()
@@ -505,6 +537,7 @@ func exprPrefixWhile(rd *rdParser) (*Expr, error) {
 	}
 	i = rd.next()
 	if i.typ != POOL {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("while expects 'pool' after body; got %s", typDebug(i))
 	}
 	e.Line = rd.line()
@@ -521,6 +554,7 @@ func exprPrefixCase(rd *rdParser) (*Expr, error) {
 	}
 	i := rd.next()
 	if i.typ != OF {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("case expects 'of' after first expression; got %s", typDebug(i))
 	}
 
@@ -535,23 +569,27 @@ func exprPrefixCase(rd *rdParser) (*Expr, error) {
 		b := &Expr{Op: Branch}
 
 		if i.typ != OBJECTID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("case branch should start with variable name; got %s", typDebug(i))
 		}
 		b.Text = i.val
 
 		i = rd.next()
 		if i.typ != ':' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("case branch expects colon after variable name; got %s", typDebug(i))
 		}
 
 		i = rd.next()
 		if i.typ != TYPEID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("case branch expects type after colon; got %s", typDebug(i))
 		}
 		b.Type = i.val
 
 		i = rd.next()
 		if i.typ != DARROW {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("case branch expects '=>' after type; got %s", typDebug(i))
 		}
 
@@ -563,6 +601,7 @@ func exprPrefixCase(rd *rdParser) (*Expr, error) {
 
 		i = rd.next()
 		if i.typ != ';' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("case branch ends with semicolon; got %s", typDebug(i))
 		}
 		b.Line = rd.line()
@@ -583,6 +622,7 @@ func exprPrefixIf(rd *rdParser) (*Expr, error) {
 	}
 	i := rd.next()
 	if i.typ != THEN {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("if expects 'then' after condition; got %s", typDebug(i))
 	}
 	e.Right, err = rd.expr()
@@ -591,6 +631,7 @@ func exprPrefixIf(rd *rdParser) (*Expr, error) {
 	}
 	i = rd.next()
 	if i.typ != ELSE {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("if expects 'else' after first expression; got %s", typDebug(i))
 	}
 	e.Else, err = rd.expr()
@@ -599,6 +640,7 @@ func exprPrefixIf(rd *rdParser) (*Expr, error) {
 	}
 	i = rd.next()
 	if i.typ != FI {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("if expects closing 'fi'; got %s", typDebug(i))
 	}
 	e.Line = rd.line()
@@ -614,15 +656,18 @@ func (rd *rdParser) bindings() ([]*Expr, error) {
 		line := rd.line()
 		i := rd.next()
 		if i.typ != OBJECTID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Bindings should start with object name; got %s", typDebug(i))
 		}
 		e := &Expr{Op: Placeholder, Text: i.val, Base: Base{Line: line}}
 		i = rd.next()
 		if i.typ != ':' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Bindings expect colon after name; got %s", typDebug(i))
 		}
 		i = rd.next()
 		if i.typ != TYPEID {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Bindings expect type after colon; got %s", typDebug(i))
 		}
 		e.Type = i.val
@@ -636,6 +681,7 @@ func (rd *rdParser) bindings() ([]*Expr, error) {
 			return es, nil
 		}
 		if i.typ != ',' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Binding can be followed by comma, or IN; got %s", typDebug(i))
 		}
 	}
@@ -690,6 +736,7 @@ func exprPrefixParenthesized(rd *rdParser) (*Expr, error) {
 	}
 	i := rd.next()
 	if i.typ != ')' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Parenthesized expression should end with ')'; got %s", typDebug(i))
 	}
 
@@ -714,6 +761,7 @@ func exprPrefixExprList(rd *rdParser) (*Expr, error) {
 		es = append(es, e)
 		i = rd.next()
 		if i.typ != ';' {
+			rd.error("syntax error")
 			return nil, fmt.Errorf("Expression should end with semicolon; got %s", typDebug(i))
 		}
 	}
@@ -735,11 +783,13 @@ func exprInfixDispatch(rd *rdParser, left *Expr) (*Expr, error) {
 	e := &Expr{Op: Dispatch, Left: left}
 	i := rd.next()
 	if i.typ != OBJECTID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Dispatch expects method name after dot; got %s", typDebug(i))
 	}
 	e.Text = i.val
 	i = rd.next()
 	if i.typ != '(' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Dispatch expecting opening paren; got %s", typDebug(i))
 	}
 	es, err := rd.argExprs()
@@ -756,20 +806,24 @@ func exprInfixStaticDispatch(rd *rdParser, left *Expr) (*Expr, error) {
 	e := &Expr{Op: StaticDispatch, Left: left}
 	i := rd.next()
 	if i.typ != TYPEID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Static dispatch expects type name after @; got %s", typDebug(i))
 	}
 	e.InternalType = i.val
 	i = rd.next()
 	if i.typ != '.' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Static dispatch expects period after type name; got %s", typDebug(i))
 	}
 	i = rd.next()
 	if i.typ != OBJECTID {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Static dispatch expects method name after dot; got %s", typDebug(i))
 	}
 	e.Text = i.val
 	i = rd.next()
 	if i.typ != '(' {
+		rd.error("syntax error")
 		return nil, fmt.Errorf("Static dispatch expecting opening paren; got %s", typDebug(i))
 	}
 	es, err := rd.argExprs()
