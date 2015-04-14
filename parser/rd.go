@@ -97,6 +97,7 @@ func (rd *rdParser) logf(format string, v ...interface{}) {
 }
 
 func (rd *rdParser) error(e string) {
+	rd.parseError = true
 	fmt.Printf("%q, line %d: %s at or near %s\n", rd.l.name, rd.l.lineNumber(), e, printItem(rd.l.lastItem, true))
 }
 
@@ -673,7 +674,13 @@ func (rd *rdParser) bindings() ([]*Expr, error) {
 		e.Type = i.val
 		var err error
 		if e.Left, err = rd.maybeAssign(); err != nil {
-			return nil, err
+			for {
+				i = rd.peek()
+				if i.typ == ',' || i.typ == IN {
+					break
+				}
+				rd.next()
+			}
 		}
 		es = append(es, e)
 		i = rd.next()
@@ -756,7 +763,13 @@ func exprPrefixExprList(rd *rdParser) (*Expr, error) {
 		}
 		e, err := rd.expr()
 		if err != nil {
-			return nil, err
+			for {
+				i = rd.peek()
+				if i.typ == ';' {
+					break
+				}
+				rd.next()
+			}
 		}
 		es = append(es, e)
 		i = rd.next()
@@ -849,6 +862,10 @@ func operator(typ int, op ExprOp, prec precedence, parslets map[int]infixInfo) {
 
 // exprInfixCmp parses a comparison expression.
 func exprInfixCmp(rd *rdParser, left *Expr) (*Expr, error) {
+	if left.Op == Leq || left.Op == Eq || left.Op == Lt {
+		rd.error("syntax error")
+		return nil, fmt.Errorf("Multiple comparisons with %s", typDebug(rd.i))
+	}
 	line := rd.line()
 	op := OpForCmp(rd.i.val)
 	right, err := rd.exprPrec(PREC_CMP)
